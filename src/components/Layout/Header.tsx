@@ -1,9 +1,11 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Settings, User, Activity, Brain, Shield } from 'lucide-react';
+import { Activity, Bell, Brain, Settings, Shield, User } from 'lucide-react';
+// import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 export function Header() {
   const unreadCount = 3;
+  const { user, profile } = useAuth();
 
   return (
     <motion.header 
@@ -80,8 +82,12 @@ export function Header() {
             whileHover={{ scale: 1.02 }}
           >
             <div className="text-right">
-              <p className="text-sm font-semibold text-white">Alex Chen</p>
-              <p className="text-xs text-slate-400 font-mono">Operations Lead</p>
+              <p className="text-sm font-semibold text-white">
+                {profile?.fullName || user?.displayName || user?.email || 'User'}
+              </p>
+              <p className="text-xs text-slate-400 font-mono">
+                {profile?.role || 'Role'}
+              </p>
             </div>
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">

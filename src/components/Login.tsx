@@ -5,16 +5,17 @@ import {
   onAuthStateChanged,
   signInWithCredential,
   signInWithEmailAndPassword,
+  signOut,
   updateProfile,
   User
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import LoadingSpinner from '../LoadingSpinner';
 
-// Options extracted from your user data
+// Unique options from your user dataset
 const departmentOptions = [
   'Admin', 'Leadership', 'Maintenance', 'Operations', 'Safety', 'Support'
 ];
@@ -40,18 +41,25 @@ const initialForm = {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       setAuthChecked(true);
-      if (user) navigate('/dashboard', { replace: true });
+      if (user && !isSignUp) navigate('/dashboard', { replace: true });
     });
+    // Show success message after signup redirect
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      window.history.replaceState({}, document.title);
+    }
     return unsubscribe;
-  }, [navigate]);
+  }, [navigate, location.state, isSignUp]);
 
   const handleUserDocument = async (user: User, extraFields?: typeof initialForm) => {
     const userDocRef = doc(db, 'users', user.uid);
@@ -72,7 +80,7 @@ const Login: React.FC = () => {
     }
   };
 
-  // Email/Password Login
+  // Login handler (email/password)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -87,7 +95,7 @@ const Login: React.FC = () => {
     }
   };
 
-  // Email/Password Signup
+  // Signup handler (email/password + extra fields)
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -97,7 +105,11 @@ const Login: React.FC = () => {
         await updateProfile(userCredential.user, { displayName: form.fullName });
       }
       await handleUserDocument(userCredential.user, form);
-      navigate('/dashboard', { replace: true });
+      await signOut(auth); // Sign out after registration
+      navigate('/login', {
+        replace: true,
+        state: { message: 'Registration successful! Please log in.' }
+      });
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Registration failed');
     } finally {
@@ -173,6 +185,13 @@ const Login: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Success Message */}
+          {successMessage && (
+            <div className="bg-green-600 text-white text-center rounded-lg py-2 mb-2">
+              {successMessage}
+            </div>
+          )}
 
           {/* Form Card */}
           <div className="bg-[#0f172a] p-8 rounded-2xl shadow-xl">

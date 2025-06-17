@@ -2,14 +2,17 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { Layout } from './components/Layout/Layout';
 import Login from './components/Login';
+import { AuthProvider } from './context/AuthContext';
 import { IncidentProvider } from './context/IncidentContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { IncidentDetailPage } from './pages/IncidentDetailPage';
 import { IncidentsPage } from './pages/IncidentsPage';
 import { IncidentTrackerPage } from './pages/IncidentTrackerPage';
 import PrivateRoute from './routes/PrivateRoute';
+
 function App() {
   return (
+     <AuthProvider>
     <IncidentProvider>
       <Router future={{
         v7_startTransition: true,
@@ -52,6 +55,7 @@ function App() {
       </Routes>
     </Router>
     </IncidentProvider >
+    </AuthProvider>
   );
 }
 export default App;
