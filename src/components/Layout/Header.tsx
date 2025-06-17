@@ -1,11 +1,19 @@
+import { signOut } from 'firebase/auth';
 import { motion } from 'framer-motion';
-import { Activity, Bell, Brain, Settings, Shield, User } from 'lucide-react';
-// import { useAuth } from '../context/AuthContext';
+import { Activity, Bell, Brain, LogOut, Settings, Shield, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { auth } from '../../firebase';
 
 export function Header() {
   const unreadCount = 3;
   const { user, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate('/login', { replace: true });
+  };
 
   return (
     <motion.header 
@@ -95,6 +103,15 @@ export function Header() {
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full border-2 border-slate-900" />
             </div>
+            {/* Logout Button */}
+            <button
+              className="ml-4 px-3 py-2 bg-gray-700 hover:bg-red-600 rounded-lg text-white flex items-center transition"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5 mr-1" />
+              <span className="text-sm font-semibold">Logout</span>
+            </button>
           </motion.div>
         </div>
       </div>
