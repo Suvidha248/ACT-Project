@@ -14,8 +14,10 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import LoadingSpinner from "../LoadingSpinner";
+// import { Header } from 'src\components\Layout\Header'; // Ensure this is your dashboard-style header
+import { Header } from "../components/Layout/Header";
 
-// Unique options from your user dataset
+// Options from your user dataset
 const departmentOptions = [
   "Admin",
   "Leadership",
@@ -73,7 +75,6 @@ const Login: React.FC = () => {
       setAuthChecked(true);
       if (user && !isSignUp) navigate("/dashboard", { replace: true });
     });
-    // Show success message after signup redirect
     if (location.state?.message) {
       setSuccessMessage(location.state.message);
       window.history.replaceState({}, document.title);
@@ -103,7 +104,6 @@ const Login: React.FC = () => {
     }
   };
 
-  // Login handler (email/password)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -122,7 +122,6 @@ const Login: React.FC = () => {
     }
   };
 
-  // Signup handler (email/password + extra fields)
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -138,7 +137,7 @@ const Login: React.FC = () => {
         });
       }
       await handleUserDocument(userCredential.user, form);
-      await signOut(auth); // Sign out after registration
+      await signOut(auth);
       navigate("/login", {
         replace: true,
         state: { message: "Registration successful! Please log in." },
@@ -150,7 +149,6 @@ const Login: React.FC = () => {
     }
   };
 
-  // Google Sign-In
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
       alert("No credential received");
@@ -178,30 +176,11 @@ const Login: React.FC = () => {
   if (!authChecked || isLoading) return <LoadingSpinner />;
 
   return (
-    <div className="min-h-screen flex font-sans bg-[#0f172a] text-white">
-      {/* Left Branding Section */}
-      <div className="hidden lg:flex flex-[2] flex-col items-center justify-center p-12 bg-gradient-to-b from-[#0f172a] to-[#14233c]">
-        <div className="max-w-3xl text-center select-none">
-          <h1 className="text-5xl font-extrabold mb-6 leading-tight text-cyan-400 drop-shadow-lg">
-            Automation Control Tower
-          </h1>
-          <p className="text-lg text-cyan-200 font-medium mb-10 tracking-wide">
-            Intelligent Warehouse Monitoring System
-          </p>
-          <div className="w-full max-h-[75vh] rounded-3xl overflow-hidden shadow-2xl border border-cyan-600 bg-[#1e293b]">
-            <img
-              src="/src/assets/control-tower.png"
-              alt="Warehouse Illustration"
-              className="w-full h-full object-contain"
-              style={{ userSelect: "none" }}
-              draggable={false}
-            />
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+      {/* Consistent Header */}
+      <Header isAuthPage />
 
-      {/* Right Login/Signup Section */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-[#1e293b]">
+      <main className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md space-y-6">
           {/* Tab Toggle */}
           <div className="flex justify-center">
@@ -365,7 +344,7 @@ const Login: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
