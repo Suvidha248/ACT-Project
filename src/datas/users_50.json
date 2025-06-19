@@ -1,0 +1,402 @@
+[
+  {
+    "fullName": "angle c",
+    "username": "user01",
+    "email": "user01@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Supervisor",
+    "group": "GRP_Supervisor"
+  },
+  {
+    "fullName": "babu c",
+    "username": "user02",
+    "email": "user02@warehousecorp.com",
+    "department": "Support",
+    "role": "IT Support",
+    "group": "GRP_IT_Support"
+  },
+  {
+    "fullName": "keshav p",
+    "username": "user03",
+    "email": "user03@warehousecorp.com",
+    "department": "Support",
+    "role": "Facility Support",
+    "group": "GRP_Facility_Support"
+  },
+  {
+    "fullName": "good e",
+    "username": "user04",
+    "email": "user04@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Ops Manager",
+    "group": "GRP_Ops_Manager"
+  },
+  {
+    "fullName": "LIOJ 5",
+    "username": "user05",
+    "email": "user05@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Plant Head",
+    "group": "GRP_Plant_Head"
+  },
+  {
+    "fullName": "LIJioajfi L",
+    "username": "user06",
+    "email": "user06@warehousecorp.com",
+    "department": "Admin",
+    "role": "System Admin",
+    "group": "GRP_System_Admin"
+  },
+  {
+    "fullName": "babuu V",
+    "username": "user07",
+    "email": "user07@warehousecorp.com",
+    "department": "Operations",
+    "role": "Operator",
+    "group": "GRP_Operator"
+  },
+  {
+    "fullName": "Chiri P",
+    "username": "user08",
+    "email": "user08@warehousecorp.com",
+    "department": "Operations",
+    "role": "Floor Supervisor",
+    "group": "GRP_Floor_Supervisor"
+  },
+  {
+    "fullName": "Doctor B",
+    "username": "user09",
+    "email": "user09@warehousecorp.com",
+    "department": "Safety",
+    "role": "Safety Officer",
+    "group": "GRP_Safety_Officer"
+  },
+  {
+    "fullName": "Safe G",
+    "username": "user10",
+    "email": "user10@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Technician",
+    "group": "GRP_Technician"
+  },
+  {
+    "fullName": "User 11",
+    "username": "user11",
+    "email": "user11@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Supervisor",
+    "group": "GRP_Supervisor"
+  },
+  {
+    "fullName": "User 12",
+    "username": "user12",
+    "email": "user12@warehousecorp.com",
+    "department": "Support",
+    "role": "IT Support",
+    "group": "GRP_IT_Support"
+  },
+  {
+    "fullName": "User 13",
+    "username": "user13",
+    "email": "user13@warehousecorp.com",
+    "department": "Support",
+    "role": "Facility Support",
+    "group": "GRP_Facility_Support"
+  },
+  {
+    "fullName": "User 14",
+    "username": "user14",
+    "email": "user14@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Ops Manager",
+    "group": "GRP_Ops_Manager"
+  },
+  {
+    "fullName": "User 15",
+    "username": "user15",
+    "email": "user15@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Plant Head",
+    "group": "GRP_Plant_Head"
+  },
+  {
+    "fullName": "User 16",
+    "username": "user16",
+    "email": "user16@warehousecorp.com",
+    "department": "Admin",
+    "role": "System Admin",
+    "group": "GRP_System_Admin"
+  },
+  {
+    "fullName": "User 17",
+    "username": "user17",
+    "email": "user17@warehousecorp.com",
+    "department": "Operations",
+    "role": "Operator",
+    "group": "GRP_Operator"
+  },
+  {
+    "fullName": "User 18",
+    "username": "user18",
+    "email": "user18@warehousecorp.com",
+    "department": "Operations",
+    "role": "Floor Supervisor",
+    "group": "GRP_Floor_Supervisor"
+  },
+  {
+    "fullName": "User 19",
+    "username": "user19",
+    "email": "user19@warehousecorp.com",
+    "department": "Safety",
+    "role": "Safety Officer",
+    "group": "GRP_Safety_Officer"
+  },
+  {
+    "fullName": "User 20",
+    "username": "user20",
+    "email": "user20@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Technician",
+    "group": "GRP_Technician"
+  },
+  {
+    "fullName": "User 21",
+    "username": "user21",
+    "email": "user21@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Supervisor",
+    "group": "GRP_Supervisor"
+  },
+  {
+    "fullName": "User 22",
+    "username": "user22",
+    "email": "user22@warehousecorp.com",
+    "department": "Support",
+    "role": "IT Support",
+    "group": "GRP_IT_Support"
+  },
+  {
+    "fullName": "User 23",
+    "username": "user23",
+    "email": "user23@warehousecorp.com",
+    "department": "Support",
+    "role": "Facility Support",
+    "group": "GRP_Facility_Support"
+  },
+  {
+    "fullName": "User 24",
+    "username": "user24",
+    "email": "user24@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Ops Manager",
+    "group": "GRP_Ops_Manager"
+  },
+  {
+    "fullName": "User 25",
+    "username": "user25",
+    "email": "user25@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Plant Head",
+    "group": "GRP_Plant_Head"
+  },
+  {
+    "fullName": "User 26",
+    "username": "user26",
+    "email": "user26@warehousecorp.com",
+    "department": "Admin",
+    "role": "System Admin",
+    "group": "GRP_System_Admin"
+  },
+  {
+    "fullName": "User 27",
+    "username": "user27",
+    "email": "user27@warehousecorp.com",
+    "department": "Operations",
+    "role": "Operator",
+    "group": "GRP_Operator"
+  },
+  {
+    "fullName": "User 28",
+    "username": "user28",
+    "email": "user28@warehousecorp.com",
+    "department": "Operations",
+    "role": "Floor Supervisor",
+    "group": "GRP_Floor_Supervisor"
+  },
+  {
+    "fullName": "User 29",
+    "username": "user29",
+    "email": "user29@warehousecorp.com",
+    "department": "Safety",
+    "role": "Safety Officer",
+    "group": "GRP_Safety_Officer"
+  },
+  {
+    "fullName": "User 30",
+    "username": "user30",
+    "email": "user30@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Technician",
+    "group": "GRP_Technician"
+  },
+  {
+    "fullName": "User 31",
+    "username": "user31",
+    "email": "user31@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Supervisor",
+    "group": "GRP_Supervisor"
+  },
+  {
+    "fullName": "User 32",
+    "username": "user32",
+    "email": "user32@warehousecorp.com",
+    "department": "Support",
+    "role": "IT Support",
+    "group": "GRP_IT_Support"
+  },
+  {
+    "fullName": "User 33",
+    "username": "user33",
+    "email": "user33@warehousecorp.com",
+    "department": "Support",
+    "role": "Facility Support",
+    "group": "GRP_Facility_Support"
+  },
+  {
+    "fullName": "User 34",
+    "username": "user34",
+    "email": "user34@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Ops Manager",
+    "group": "GRP_Ops_Manager"
+  },
+  {
+    "fullName": "User 35",
+    "username": "user35",
+    "email": "user35@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Plant Head",
+    "group": "GRP_Plant_Head"
+  },
+  {
+    "fullName": "User 36",
+    "username": "user36",
+    "email": "user36@warehousecorp.com",
+    "department": "Admin",
+    "role": "System Admin",
+    "group": "GRP_System_Admin"
+  },
+  {
+    "fullName": "User 37",
+    "username": "user37",
+    "email": "user37@warehousecorp.com",
+    "department": "Operations",
+    "role": "Operator",
+    "group": "GRP_Operator"
+  },
+  {
+    "fullName": "User 38",
+    "username": "user38",
+    "email": "user38@warehousecorp.com",
+    "department": "Operations",
+    "role": "Floor Supervisor",
+    "group": "GRP_Floor_Supervisor"
+  },
+  {
+    "fullName": "User 39",
+    "username": "user39",
+    "email": "user39@warehousecorp.com",
+    "department": "Safety",
+    "role": "Safety Officer",
+    "group": "GRP_Safety_Officer"
+  },
+  {
+    "fullName": "User 40",
+    "username": "user40",
+    "email": "user40@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Technician",
+    "group": "GRP_Technician"
+  },
+  {
+    "fullName": "User 41",
+    "username": "user41",
+    "email": "user41@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Supervisor",
+    "group": "GRP_Supervisor"
+  },
+  {
+    "fullName": "User 42",
+    "username": "user42",
+    "email": "user42@warehousecorp.com",
+    "department": "Support",
+    "role": "IT Support",
+    "group": "GRP_IT_Support"
+  },
+  {
+    "fullName": "User 43",
+    "username": "user43",
+    "email": "user43@warehousecorp.com",
+    "department": "Support",
+    "role": "Facility Support",
+    "group": "GRP_Facility_Support"
+  },
+  {
+    "fullName": "User 44",
+    "username": "user44",
+    "email": "user44@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Ops Manager",
+    "group": "GRP_Ops_Manager"
+  },
+  {
+    "fullName": "User 45",
+    "username": "user45",
+    "email": "user45@warehousecorp.com",
+    "department": "Leadership",
+    "role": "Plant Head",
+    "group": "GRP_Plant_Head"
+  },
+  {
+    "fullName": "User 46",
+    "username": "user46",
+    "email": "user46@warehousecorp.com",
+    "department": "Admin",
+    "role": "System Admin",
+    "group": "GRP_System_Admin"
+  },
+  {
+    "fullName": "User 47",
+    "username": "user47",
+    "email": "user47@warehousecorp.com",
+    "department": "Operations",
+    "role": "Operator",
+    "group": "GRP_Operator"
+  },
+  {
+    "fullName": "User 48",
+    "username": "user48",
+    "email": "user48@warehousecorp.com",
+    "department": "Operations",
+    "role": "Floor Supervisor",
+    "group": "GRP_Floor_Supervisor"
+  },
+  {
+    "fullName": "User 49",
+    "username": "user49",
+    "email": "user49@warehousecorp.com",
+    "department": "Safety",
+    "role": "Safety Officer",
+    "group": "GRP_Safety_Officer"
+  },
+  {
+    "fullName": "User 50",
+    "username": "user50",
+    "email": "user50@warehousecorp.com",
+    "department": "Maintenance",
+    "role": "Technician",
+    "group": "GRP_Technician"
+  }
+]

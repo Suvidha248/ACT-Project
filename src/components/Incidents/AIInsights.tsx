@@ -1,213 +1,222 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Incident } from '../../types';
-import { 
+import React from "react";
+import { motion } from "framer-motion";
+import {
   Brain,
-  Lightbulb,
-  Target,
-  Clock,
-  AlertTriangle,
-  Zap,
+  TrendingUp,
   Shield,
   Activity,
+  AlertCircle,
   Cpu,
-  Bot,
-  Sparkles
-} from 'lucide-react';
+  Thermometer,
+  Zap,
+} from "lucide-react";
 
-interface AIInsightsProps {
-  incident: Incident;
-}
+export function AIInsights() {
+  const insights = [
+    {
+      title: "ASRS Predictive Maintenance",
+      description:
+        "Crane #3 in Rochelle ASRS showing early fault indicators. 73% probability of drive failure within 4 hours based on vibration patterns.",
+      confidence: 87,
+      type: "warning",
+      icon: Brain,
+      action: "Schedule maintenance",
+      facility: "Rochelle",
+    },
+    {
+      title: "Security Pattern Analysis",
+      description:
+        "Gateway facility breach patterns match historical data. AI recommends enhanced monitoring for LP North and LP South sections.",
+      confidence: 94,
+      type: "critical",
+      icon: Shield,
+      action: "Deploy countermeasures",
+      facility: "Gateway",
+    },
+    {
+      title: "Trolley System Optimization",
+      description:
+        "Russellville trolley loop efficiency can improve by 23% with AI-driven routing adjustments. Reducing handoff delays.",
+      confidence: 76,
+      type: "info",
+      icon: TrendingUp,
+      action: "Apply optimization",
+      facility: "Russellville",
+    },
+    {
+      title: "WES Logic Anomaly",
+      description:
+        "Unusual container processing patterns detected. Potential WES configuration issue affecting order data retrieval.",
+      confidence: 82,
+      type: "warning",
+      icon: AlertCircle,
+      action: "Investigate logs",
+      facility: "Multi-site",
+    },
+    {
+      title: "Temperature Trend Analysis",
+      description:
+        "Cold storage zones showing gradual temperature drift. Predictive model suggests cooling system maintenance needed.",
+      confidence: 89,
+      type: "info",
+      icon: Thermometer,
+      action: "Schedule inspection",
+      facility: "Gateway",
+    },
+    {
+      title: "Power Consumption Alert",
+      description:
+        "Abnormal power usage patterns detected in ASRS systems. Potential energy optimization opportunity identified.",
+      confidence: 71,
+      type: "info",
+      icon: Zap,
+      action: "Analyze consumption",
+      facility: "All Facilities",
+    },
+  ];
 
-export function AIInsights({ incident }: AIInsightsProps) {
-  // AI Insights based on incident data
-  const getAIInsights = () => {
-    const insights = [];
-    
-    // Priority-based insights
-    if (incident.priority === 'critical') {
-      insights.push({
-        type: 'urgent',
-        icon: AlertTriangle,
-        title: 'Critical Priority Alert',
-        description: 'This incident requires immediate attention. Consider activating emergency response protocols.',
-        action: 'Activate Emergency Protocol',
-        confidence: 95
-      });
+  const getTypeGradient = (type: string) => {
+    switch (type) {
+      case "critical":
+        return "from-red-500 to-orange-500";
+      case "warning":
+        return "from-yellow-500 to-amber-500";
+      case "info":
+        return "from-teal-500 to-cyan-500";
+      default:
+        return "from-slate-500 to-gray-500";
     }
-
-    // Alert type specific insights
-    switch (incident.alertType) {
-      case 'equipment':
-        insights.push({
-          type: 'maintenance',
-          icon: Cpu,
-          title: 'Predictive Maintenance',
-          description: 'AI analysis suggests checking related equipment components. Historical data shows 78% correlation with similar failures.',
-          action: 'Run Diagnostic Scan',
-          confidence: 87
-        });
-        break;
-      case 'security':
-        insights.push({
-          type: 'security',
-          icon: Shield,
-          title: 'Security Pattern Analysis',
-          description: 'Incident pattern matches previous security events. Recommend enhanced monitoring for 24 hours.',
-          action: 'Enable Enhanced Monitoring',
-          confidence: 92
-        });
-        break;
-      case 'temperature':
-        insights.push({
-          type: 'environmental',
-          icon: Activity,
-          title: 'Environmental Control',
-          description: 'Temperature anomaly detected. AI recommends checking HVAC system and nearby sensors.',
-          action: 'Check HVAC Systems',
-          confidence: 89
-        });
-        break;
-    }
-
-    // Location-based insights
-    if (incident.location.includes('ASRS')) {
-      insights.push({
-        type: 'system',
-        icon: Brain,
-        title: 'ASRS System Analysis',
-        description: 'Automated Storage system showing patterns consistent with crane calibration issues. Recommend preventive maintenance.',
-        action: 'Schedule Calibration',
-        confidence: 84
-      });
-    }
-
-    // Time-based insights
-    const hoursSinceCreated = (new Date().getTime() - incident.createdAt.getTime()) / (1000 * 60 * 60);
-    if (hoursSinceCreated > 2 && incident.status === 'new') {
-      insights.push({
-        type: 'workflow',
-        icon: Clock,
-        title: 'Response Time Alert',
-        description: 'Incident has been open for over 2 hours. Consider escalation or reassignment to expedite resolution.',
-        action: 'Escalate Priority',
-        confidence: 91
-      });
-    }
-
-    // Resolution suggestions
-    if (incident.status === 'in-progress') {
-      insights.push({
-        type: 'resolution',
-        icon: Target,
-        title: 'Resolution Strategy',
-        description: 'Based on similar incidents, average resolution time is 3.2 hours. Current progress is on track.',
-        action: 'Continue Current Approach',
-        confidence: 76
-      });
-    }
-
-    return insights.slice(0, 3); // Limit to top 3 insights
   };
 
-  const aiInsights = getAIInsights();
-
-  const getInsightGradient = (type: string) => {
+  const getTypeColor = (type: string) => {
     switch (type) {
-      case 'urgent': return 'from-red-500 to-orange-500';
-      case 'security': return 'from-red-500 to-pink-500';
-      case 'maintenance': return 'from-orange-500 to-yellow-500';
-      case 'environmental': return 'from-blue-500 to-cyan-500';
-      case 'system': return 'from-purple-500 to-pink-500';
-      case 'workflow': return 'from-yellow-500 to-amber-500';
-      case 'resolution': return 'from-emerald-500 to-green-500';
-      default: return 'from-slate-500 to-gray-500';
+      case "critical":
+        return "text-red-400";
+      case "warning":
+        return "text-yellow-400";
+      case "info":
+        return "text-teal-400";
+      default:
+        return "text-slate-400";
+    }
+  };
+
+  const getFacilityColor = (facility: string) => {
+    switch (facility) {
+      case "Rochelle":
+        return "text-blue-400";
+      case "Gateway":
+        return "text-green-400";
+      case "Russellville":
+        return "text-purple-400";
+      default:
+        return "text-cyan-400";
     }
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="glass-card p-6 hologram-effect"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.5, delay: 0.4 }}
     >
       <div className="flex items-center space-x-3 mb-6">
-        <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl relative">
+        <div className="p-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl">
           <Brain className="w-5 h-5 text-white" />
-          <motion.div
-            className="absolute inset-0 rounded-xl border-2 border-purple-400/30"
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
         </div>
         <div>
-          <h3 className="text-lg font-bold text-white">AI Insights</h3>
-          <p className="text-sm text-purple-300/80">Intelligent recommendations</p>
-        </div>
-        <div className="ml-auto flex items-center space-x-2">
-          <motion.div
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 3, repeat: Infinity }}
-          >
-            <Bot className="w-4 h-4 text-purple-400" />
-          </motion.div>
-          <span className="text-xs text-purple-300 font-mono">ANALYZING</span>
+          <h3 className="text-xl font-bold text-white">ACT Intelligence</h3>
+          <p className="text-sm text-slate-400">
+            AI-powered warehouse insights
+          </p>
         </div>
       </div>
 
-      <div className="space-y-4">
-        {aiInsights.map((insight, index) => (
+      <div className="space-y-4 max-h-96 overflow-y-auto scrollbar-hide">
+        {insights.map((insight, index) => (
           <motion.div
             key={index}
             className="glass-card-hover p-4 border border-white/10 rounded-xl group cursor-pointer relative overflow-hidden"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileHover={{ scale: 1.01 }}
           >
             <div className="flex items-start space-x-3">
-              <motion.div 
-                className={`p-2 rounded-lg bg-gradient-to-br ${getInsightGradient(insight.type)} flex-shrink-0`}
+              <motion.div
+                className={`p-2 rounded-lg bg-gradient-to-br ${getTypeGradient(
+                  insight.type
+                )} flex-shrink-0`}
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.6 }}
               >
                 <insight.icon className="w-4 h-4 text-white" />
               </motion.div>
-              
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-semibold text-white">{insight.title}</h4>
+                  <h4 className="text-sm font-semibold text-white">
+                    {insight.title}
+                  </h4>
                   <div className="flex items-center space-x-2">
-                    <Sparkles className="w-3 h-3 text-yellow-400" />
-                    <span className="text-xs font-mono text-teal-300">{insight.confidence}%</span>
+                    <div
+                      className={`w-2 h-2 rounded-full ${getTypeColor(
+                        insight.type
+                      )} animate-pulse`}
+                    />
+                    <span className="text-xs font-mono text-teal-300">
+                      {insight.confidence}%
+                    </span>
                   </div>
                 </div>
-                
-                <p className="text-xs text-slate-300 mb-3">
+
+                <p className="text-xs text-slate-300 mb-3 line-clamp-3">
                   {insight.description}
                 </p>
-                
+
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Activity className="w-3 h-3 text-teal-400" />
+                    <span className="text-xs text-teal-300 font-mono">
+                      ANALYZING
+                    </span>
+                  </div>
+
+                  <span
+                    className={`text-xs font-mono ${getFacilityColor(
+                      insight.facility
+                    )}`}
+                  >
+                    {insight.facility}
+                  </span>
+                </div>
+
                 <div className="flex items-center justify-between">
-                  <motion.button 
-                    className={`text-xs px-3 py-1 rounded-lg bg-gradient-to-r ${getInsightGradient(insight.type)} text-white font-medium`}
+                  <motion.button
+                    className={`text-xs px-2 py-1 rounded-lg bg-gradient-to-r ${getTypeGradient(
+                      insight.type
+                    )} text-white font-medium`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
                     {insight.action}
                   </motion.button>
-                  
-                  <div className="flex items-center space-x-1">
-                    <Lightbulb className="w-3 h-3 text-yellow-400" />
-                    <span className="text-xs text-yellow-300 font-mono">AI SUGGESTION</span>
-                  </div>
                 </div>
-                
+
                 {/* Confidence bar */}
                 <div className="mt-3">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-slate-400">AI Confidence</span>
+                    <span className="text-teal-300 font-mono">
+                      {insight.confidence}%
+                    </span>
+                  </div>
                   <div className="w-full bg-slate-700 rounded-full h-1">
-                    <motion.div 
-                      className={`h-1 rounded-full bg-gradient-to-r ${getInsightGradient(insight.type)}`}
+                    <motion.div
+                      className={`h-1 rounded-full bg-gradient-to-r ${getTypeGradient(
+                        insight.type
+                      )}`}
                       initial={{ width: 0 }}
                       animate={{ width: `${insight.confidence}%` }}
                       transition={{ duration: 1, delay: index * 0.2 }}
@@ -220,25 +229,27 @@ export function AIInsights({ incident }: AIInsightsProps) {
         ))}
       </div>
 
-      {/* AI Engine Status */}
-      <motion.div 
-        className="mt-6 p-3 glass-card rounded-xl border border-purple-500/20"
+      <motion.div
+        className="mt-6 p-4 glass-card rounded-xl border border-teal-500/20"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.8 }}
+        transition={{ delay: 1 }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Zap className="w-4 h-4 text-purple-400 animate-pulse" />
-            <span className="text-sm font-semibold text-white">AI Analysis Engine</span>
+            <Cpu className="w-4 h-4 text-teal-400 animate-pulse" />
+            <span className="text-sm font-semibold text-white">
+              ACT AI Engine
+            </span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-            <span className="text-xs text-emerald-400 font-mono">ACTIVE</span>
+            <span className="text-xs text-emerald-400 font-mono">OPTIMAL</span>
           </div>
         </div>
         <div className="mt-2 text-xs text-slate-400 font-mono">
-          Processing incident patterns • Confidence: {Math.max(...aiInsights.map(i => i.confidence))}% • Last update: 2s ago
+          Processing 2.4M sensor events/sec • Learning rate: 97.8% • Prediction
+          accuracy: 94.2%
         </div>
       </motion.div>
     </motion.div>

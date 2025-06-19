@@ -1,4 +1,4 @@
-import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
+import { CredentialResponse, GoogleLogin } from "@react-oauth/google";
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
@@ -7,36 +7,56 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
-  User
-} from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import LoadingSpinner from '../LoadingSpinner';
+  User,
+} from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { auth, db } from "../firebase";
+import LoadingSpinner from "../LoadingSpinner";
 
 // Unique options from your user dataset
 const departmentOptions = [
-  'Admin', 'Leadership', 'Maintenance', 'Operations', 'Safety', 'Support'
+  "Admin",
+  "Leadership",
+  "Maintenance",
+  "Operations",
+  "Safety",
+  "Support",
 ];
 const roleOptions = [
-  'Facility Support', 'Floor Supervisor', 'IT Support', 'Operator', 'Ops Manager',
-  'Plant Head', 'Safety Officer', 'Supervisor', 'System Admin', 'Technician'
+  "Facility Support",
+  "Floor Supervisor",
+  "IT Support",
+  "Operator",
+  "Ops Manager",
+  "Plant Head",
+  "Safety Officer",
+  "Supervisor",
+  "System Admin",
+  "Technician",
 ];
 const groupOptions = [
-  'GRP_Facility_Support', 'GRP_Floor_Supervisor', 'GRP_IT_Support', 'GRP_Operator',
-  'GRP_Ops_Manager', 'GRP_Plant_Head', 'GRP_Safety_Officer', 'GRP_Supervisor',
-  'GRP_System_Admin', 'GRP_Technician'
+  "GRP_Facility_Support",
+  "GRP_Floor_Supervisor",
+  "GRP_IT_Support",
+  "GRP_Operator",
+  "GRP_Ops_Manager",
+  "GRP_Plant_Head",
+  "GRP_Safety_Officer",
+  "GRP_Supervisor",
+  "GRP_System_Admin",
+  "GRP_Technician",
 ];
 
 const initialForm = {
-  email: '',
-  password: '',
-  fullName: '',
-  username: '',
-  department: '',
-  role: '',
-  group: ''
+  email: "",
+  password: "",
+  fullName: "",
+  username: "",
+  department: "",
+  role: "",
+  group: "",
 };
 
 const Login: React.FC = () => {
@@ -46,12 +66,12 @@ const Login: React.FC = () => {
   const [authChecked, setAuthChecked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [form, setForm] = useState(initialForm);
-  const [successMessage, setSuccessMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: User | null) => {
       setAuthChecked(true);
-      if (user && !isSignUp) navigate('/dashboard', { replace: true });
+      if (user && !isSignUp) navigate("/dashboard", { replace: true });
     });
     // Show success message after signup redirect
     if (location.state?.message) {
@@ -61,20 +81,23 @@ const Login: React.FC = () => {
     return unsubscribe;
   }, [navigate, location.state, isSignUp]);
 
-  const handleUserDocument = async (user: User, extraFields?: typeof initialForm) => {
-    const userDocRef = doc(db, 'users', user.uid);
+  const handleUserDocument = async (
+    user: User,
+    extraFields?: typeof initialForm
+  ) => {
+    const userDocRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userDocRef);
     if (!userSnap.exists()) {
       await setDoc(userDocRef, {
         uid: user.uid,
         email: user.email,
-        displayName: user.displayName || extraFields?.fullName || '',
-        fullName: extraFields?.fullName || '',
-        username: extraFields?.username || '',
-        department: extraFields?.department || '',
-        role: extraFields?.role || 'Viewer',
-        group: extraFields?.group || '',
-        photoURL: user.photoURL || '',
+        displayName: user.displayName || extraFields?.fullName || "",
+        fullName: extraFields?.fullName || "",
+        username: extraFields?.username || "",
+        department: extraFields?.department || "",
+        role: extraFields?.role || "Viewer",
+        group: extraFields?.group || "",
+        photoURL: user.photoURL || "",
         createdAt: new Date(),
       });
     }
@@ -85,11 +108,15 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
       await handleUserDocument(userCredential.user);
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Login failed');
+      alert(error instanceof Error ? error.message : "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -100,18 +127,24 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
       if (userCredential.user && form.fullName) {
-        await updateProfile(userCredential.user, { displayName: form.fullName });
+        await updateProfile(userCredential.user, {
+          displayName: form.fullName,
+        });
       }
       await handleUserDocument(userCredential.user, form);
       await signOut(auth); // Sign out after registration
-      navigate('/login', {
+      navigate("/login", {
         replace: true,
-        state: { message: 'Registration successful! Please log in.' }
+        state: { message: "Registration successful! Please log in." },
       });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Registration failed');
+      alert(error instanceof Error ? error.message : "Registration failed");
     } finally {
       setIsLoading(false);
     }
@@ -120,24 +153,26 @@ const Login: React.FC = () => {
   // Google Sign-In
   const handleSuccess = async (credentialResponse: CredentialResponse) => {
     if (!credentialResponse.credential) {
-      alert('No credential received');
+      alert("No credential received");
       return;
     }
     setIsLoading(true);
     try {
-      const credential = GoogleAuthProvider.credential(credentialResponse.credential);
+      const credential = GoogleAuthProvider.credential(
+        credentialResponse.credential
+      );
       const userCredential = await signInWithCredential(auth, credential);
       await handleUserDocument(userCredential.user);
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Authentication failed');
+      alert(error instanceof Error ? error.message : "Authentication failed");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleError = () => {
-    alert('Failed to authenticate with Google. Please try again.');
+    alert("Failed to authenticate with Google. Please try again.");
   };
 
   if (!authChecked || isLoading) return <LoadingSpinner />;
@@ -158,7 +193,7 @@ const Login: React.FC = () => {
               src="/src/assets/control-tower.png"
               alt="Warehouse Illustration"
               className="w-full h-full object-contain"
-              style={{ userSelect: 'none' }}
+              style={{ userSelect: "none" }}
               draggable={false}
             />
           </div>
@@ -172,13 +207,17 @@ const Login: React.FC = () => {
           <div className="flex justify-center">
             <div className="inline-flex rounded-full bg-gray-700">
               <button
-                className={`px-6 py-2 rounded-l-full font-semibold transition ${!isSignUp ? 'bg-cyan-500 text-white' : 'text-white'}`}
+                className={`px-6 py-2 rounded-l-full font-semibold transition ${
+                  !isSignUp ? "bg-cyan-500 text-white" : "text-white"
+                }`}
                 onClick={() => setIsSignUp(false)}
               >
                 Login
               </button>
               <button
-                className={`px-6 py-2 rounded-r-full font-semibold transition ${isSignUp ? 'bg-cyan-500 text-white' : 'text-white'}`}
+                className={`px-6 py-2 rounded-r-full font-semibold transition ${
+                  isSignUp ? "bg-cyan-500 text-white" : "text-white"
+                }`}
                 onClick={() => setIsSignUp(true)}
               >
                 Sign Up
@@ -196,10 +235,15 @@ const Login: React.FC = () => {
           {/* Form Card */}
           <div className="bg-[#0f172a] p-8 rounded-2xl shadow-xl">
             <div className="text-center mb-6">
-              <h2 className="text-2xl font-bold">{isSignUp ? 'Create Account' : 'Sign In'}</h2>
+              <h2 className="text-2xl font-bold">
+                {isSignUp ? "Create Account" : "Sign In"}
+              </h2>
             </div>
 
-            <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
+            <form
+              onSubmit={isSignUp ? handleSignUp : handleLogin}
+              className="space-y-4"
+            >
               {isSignUp && (
                 <>
                   <input
@@ -208,7 +252,9 @@ const Login: React.FC = () => {
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white placeholder-gray-400"
                     value={form.fullName}
-                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, fullName: e.target.value }))
+                    }
                   />
                   <input
                     type="text"
@@ -216,39 +262,53 @@ const Login: React.FC = () => {
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white placeholder-gray-400"
                     value={form.username}
-                    onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, username: e.target.value }))
+                    }
                   />
                   <select
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white"
                     value={form.department}
-                    onChange={e => setForm(f => ({ ...f, department: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, department: e.target.value }))
+                    }
                   >
                     <option value="">Select Department</option>
-                    {departmentOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                    {departmentOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
                     ))}
                   </select>
                   <select
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white"
                     value={form.role}
-                    onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, role: e.target.value }))
+                    }
                   >
                     <option value="">Select Role</option>
-                    {roleOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                    {roleOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
                     ))}
                   </select>
                   <select
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white"
                     value={form.group}
-                    onChange={e => setForm(f => ({ ...f, group: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, group: e.target.value }))
+                    }
                   >
                     <option value="">Select Group</option>
-                    {groupOptions.map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
+                    {groupOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
                     ))}
                   </select>
                 </>
@@ -259,7 +319,9 @@ const Login: React.FC = () => {
                 required
                 className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white placeholder-gray-400"
                 value={form.email}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, email: e.target.value }))
+                }
               />
               <input
                 type="password"
@@ -267,13 +329,15 @@ const Login: React.FC = () => {
                 required
                 className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white placeholder-gray-400"
                 value={form.password}
-                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, password: e.target.value }))
+                }
               />
               <button
                 type="submit"
                 className="w-full py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-lg transition"
               >
-                {isSignUp ? 'Sign Up' : 'Login'}
+                {isSignUp ? "Sign Up" : "Login"}
               </button>
             </form>
 

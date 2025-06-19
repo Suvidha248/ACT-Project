@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { Incident, IncidentStatus, User, Note } from '../types';
-import { mockIncidents, mockUsers } from '../data/mockData';
+import React, { createContext, useContext, useReducer, ReactNode } from "react";
+import { Incident, IncidentStatus, User, Note } from "../types";
+import { mockIncidents, mockUsers } from "../data/mockData";
 
 interface IncidentState {
   incidents: Incident[];
@@ -9,14 +9,17 @@ interface IncidentState {
 }
 
 type IncidentAction =
-  | { type: 'SET_INCIDENTS'; payload: Incident[] }
-  | { type: 'SELECT_INCIDENT'; payload: Incident | null }
-  | { type: 'UPDATE_INCIDENT'; payload: Incident }
-  | { type: 'ADD_INCIDENT'; payload: Incident }
-  | { type: 'ADD_NOTE'; payload: { incidentId: string; note: Note } }
-  | { type: 'ASSIGN_INCIDENT'; payload: { incidentId: string; user: User } }
-  | { type: 'UPDATE_STATUS'; payload: { incidentId: string; status: IncidentStatus } }
-  | { type: 'ESCALATE_INCIDENT'; payload: { incidentId: string } };
+  | { type: "SET_INCIDENTS"; payload: Incident[] }
+  | { type: "SELECT_INCIDENT"; payload: Incident | null }
+  | { type: "UPDATE_INCIDENT"; payload: Incident }
+  | { type: "ADD_INCIDENT"; payload: Incident }
+  | { type: "ADD_NOTE"; payload: { incidentId: string; note: Note } }
+  | { type: "ASSIGN_INCIDENT"; payload: { incidentId: string; user: User } }
+  | {
+      type: "UPDATE_STATUS";
+      payload: { incidentId: string; status: IncidentStatus };
+    }
+  | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } };
 
 const initialState: IncidentState = {
   incidents: mockIncidents,
@@ -24,90 +27,107 @@ const initialState: IncidentState = {
   users: mockUsers,
 };
 
-function incidentReducer(state: IncidentState, action: IncidentAction): IncidentState {
+function incidentReducer(
+  state: IncidentState,
+  action: IncidentAction
+): IncidentState {
   switch (action.type) {
-    case 'SET_INCIDENTS':
+    case "SET_INCIDENTS":
       return { ...state, incidents: action.payload };
-    
-    case 'SELECT_INCIDENT':
+
+    case "SELECT_INCIDENT":
       return { ...state, selectedIncident: action.payload };
-    
-    case 'UPDATE_INCIDENT':
+
+    case "UPDATE_INCIDENT":
       return {
         ...state,
-        incidents: state.incidents.map(incident =>
-          incident.id === action.payload.id ? action.payload : incident
+        incidents: state.incidents.map((i) =>
+          i.id === action.payload.id ? action.payload : i
         ),
-        selectedIncident: state.selectedIncident?.id === action.payload.id ? action.payload : state.selectedIncident,
+        selectedIncident:
+          state.selectedIncident?.id === action.payload.id
+            ? action.payload
+            : state.selectedIncident,
       };
-    
-    case 'ADD_INCIDENT':
+
+    case "ADD_INCIDENT":
       return {
         ...state,
         incidents: [action.payload, ...state.incidents],
       };
-    
-    case 'ADD_NOTE':
+
+    case "ADD_NOTE":
       return {
         ...state,
-        incidents: state.incidents.map(incident =>
-          incident.id === action.payload.incidentId
-            ? { ...incident, notes: [...incident.notes, action.payload.note], updatedAt: new Date() }
-            : incident
+        incidents: state.incidents.map((i) =>
+          i.id === action.payload.incidentId
+            ? {
+                ...i,
+                notes: [...i.notes, action.payload.note],
+                updatedAt: new Date(),
+              }
+            : i
         ),
       };
-    
-    case 'ASSIGN_INCIDENT':
+
+    case "ASSIGN_INCIDENT":
       return {
         ...state,
-        incidents: state.incidents.map(incident =>
-          incident.id === action.payload.incidentId
-            ? { ...incident, assignedTo: action.payload.user, updatedAt: new Date() }
-            : incident
+        incidents: state.incidents.map((i) =>
+          i.id === action.payload.incidentId
+            ? {
+                ...i,
+                assignedTo: action.payload.user,
+                updatedAt: new Date(),
+              }
+            : i
         ),
       };
-    
-    case 'UPDATE_STATUS':
+
+    case "UPDATE_STATUS": {
       const now = new Date();
       return {
         ...state,
-        incidents: state.incidents.map(incident => {
-          if (incident.id === action.payload.incidentId) {
-            const updates: Partial<Incident> = {
-              status: action.payload.status,
-              updatedAt: now,
-            };
-            
-            if (action.payload.status === 'acknowledged' && !incident.acknowledgedAt) {
-              updates.acknowledgedAt = now;
-            } else if (action.payload.status === 'resolved' && !incident.resolvedAt) {
-              updates.resolvedAt = now;
-            } else if (action.payload.status === 'closed' && !incident.closedAt) {
-              updates.closedAt = now;
-            }
-            
-            return { ...incident, ...updates };
-          }
-          return incident;
+        incidents: state.incidents.map((i) => {
+          if (i.id !== action.payload.incidentId) return i;
+
+          const updates: Partial<Incident> = {
+            status: action.payload.status,
+            updatedAt: now,
+          };
+
+          if (action.payload.status === "acknowledged" && !i.acknowledgedAt)
+            updates.acknowledgedAt = now;
+          else if (action.payload.status === "resolved" && !i.resolvedAt)
+            updates.resolvedAt = now;
+          else if (action.payload.status === "closed" && !i.closedAt)
+            updates.closedAt = now;
+
+          return { ...i, ...updates };
         }),
       };
-    
-    case 'ESCALATE_INCIDENT':
+    }
+
+    case "ESCALATE_INCIDENT":
       return {
         ...state,
-        incidents: state.incidents.map(incident =>
-          incident.id === action.payload.incidentId
-            ? { 
-                ...incident, 
-                escalationLevel: incident.escalationLevel + 1,
-                priority: incident.priority === 'low' ? 'medium' : 
-                         incident.priority === 'medium' ? 'high' : 'critical',
-                updatedAt: new Date()
+        incidents: state.incidents.map((i) =>
+          i.id === action.payload.incidentId
+            ? {
+                ...i,
+                escalationLevel: i.escalationLevel + 1,
+                priority:
+                  i.priority === "low"
+                    ? "medium"
+                    : i.priority === "medium"
+                    ? "high"
+                    : "critical",
+                updatedAt: new Date(),
               }
-            : incident
+            : i
         ),
       };
-    
+
     default:
       return state;
   }
@@ -131,7 +151,7 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
 export function useIncidents() {
   const context = useContext(IncidentContext);
   if (!context) {
-    throw new Error('useIncidents must be used within an IncidentProvider');
+    throw new Error("useIncidents must be used within an IncidentProvider");
   }
   return context;
 }
