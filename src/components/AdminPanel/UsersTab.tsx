@@ -13,7 +13,7 @@ const UsersTab: React.FC = () => {
   const usersPerPage = 10;
 
   useEffect(() => {
-    fetch("http://172.17.17.47:8080/api/admin/users")
+    fetch("http://localhost:8080/api/admin/users")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
