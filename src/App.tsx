@@ -13,6 +13,7 @@ import { IncidentDetailPage } from "./pages/IncidentDetailPage";
 import { IncidentTrackerPage } from "./pages/IncidentTrackerPage";
 import UsersPage from "./pages/UsersPage";
 import UploadUsers from "./pages/UploadUsers";
+import AdminPanel from "./components/AdminPanel/AdminPanel";
 
 const Unauthorized = () => (
   <div className="p-6">
@@ -27,6 +28,7 @@ function App() {
       <IncidentProvider>
         <Router>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
             <Route element={<Layout />}>
@@ -50,6 +52,15 @@ function App() {
                 />
 
                 <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={["Admin"]}>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
                   path="/settings"
                   element={
                     <ProtectedRoute allowedRoles={["Admin", "Leader"]}>
@@ -62,7 +73,6 @@ function App() {
                   }
                 />
 
-                {/* Placeholder Pages */}
                 <Route
                   path="/reports"
                   element={

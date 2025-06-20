@@ -42,7 +42,7 @@ const navigation = [
   },
   {
     name: "Team",
-    href: "/team",
+    href: "/admin",
     icon: Users,
     color: "from-blue-500 to-cyan-500",
   },
