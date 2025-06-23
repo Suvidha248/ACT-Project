@@ -13,19 +13,27 @@ const UsersTab: React.FC = () => {
   const usersPerPage = 10;
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/admin/users")
-      .then((response) => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch("http://:8080/api/admin/users", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-      })
-      .then((data: User[]) => {
+
+        const data: User[] = await response.json();
         setUsers(data);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Error fetching users:", error);
-      });
+      }
+    };
+
+    fetchUsers();
   }, []);
 
   const filteredUsers = users.filter((user) => {
@@ -46,8 +54,8 @@ const UsersTab: React.FC = () => {
 
   return (
     <div className="text-white">
-      {/* Filters */}
-      <div className="flex justify-between items-center mb-2">
+      {/* Search & Filter */}
+      <div className="flex justify-between items-center mb-4">
         <input
           type="text"
           placeholder="Search by name"
@@ -70,13 +78,13 @@ const UsersTab: React.FC = () => {
         </select>
       </div>
 
-      {/* Table */}
+      {/* User Table */}
       <div className="bg-slate-800 rounded-lg overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-700 text-teal-400 text-sm uppercase">
               <th className="p-3">#</th>
-              <th className="p-3">fullName</th>
+              <th className="p-3">Full Name</th>
               <th className="p-3">Role</th>
               <th className="p-3">Action</th>
             </tr>
@@ -86,7 +94,7 @@ const UsersTab: React.FC = () => {
               paginatedUsers.map((user, index) => (
                 <tr
                   key={index}
-                  className="border-b border-slate-600 hover:bg-slate-700"
+                  className="border-b border-slate-600 hover:bg-slate-700 text-sm"
                 >
                   <td className="p-3">
                     {(currentPage - 1) * usersPerPage + index + 1}

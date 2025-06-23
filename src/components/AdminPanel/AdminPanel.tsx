@@ -7,7 +7,7 @@ const AdminPanel: React.FC = () => {
 
   return (
     <div className="p-6 text-white">
-      <h2 className="text-3xl font-bold gradient-text mb-4">Admin Panel</h2>
+      <h2 className="text-3xl font-bold gradient-text mb-4">Users</h2>
 
       <div className="flex mb-6 w-full rounded-lg overflow-hidden border border-slate-600">
         <button
