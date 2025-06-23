@@ -12,10 +12,9 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Header } from "../components/Layout/Header";
 import { auth, db } from "../firebase";
 import LoadingSpinner from "../LoadingSpinner";
-// import { Header } from 'src\components\Layout\Header'; // Ensure this is your dashboard-style header
-import { Header } from "../components/Layout/Header";
 
 // Options from your user dataset
 const departmentOptions = [
@@ -104,6 +103,21 @@ const Login: React.FC = () => {
     }
   };
 
+  // <-- ADDED: Send ID token to backend
+  const sendTokenToBackend = async (user: User) => {
+    const idToken = await user.getIdToken();
+    // Example fetch to backend (replace with your endpoint)
+    await fetch("https://your-backend/api/your-endpoint", {
+      method: "GET", // or POST, etc.
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    // Optionally, store the token in localStorage/sessionStorage if needed
+    // localStorage.setItem("idToken", idToken);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -114,6 +128,7 @@ const Login: React.FC = () => {
         form.password
       );
       await handleUserDocument(userCredential.user);
+      await sendTokenToBackend(userCredential.user); // <-- ADDED
       navigate("/dashboard", { replace: true });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Login failed");
@@ -161,6 +176,7 @@ const Login: React.FC = () => {
       );
       const userCredential = await signInWithCredential(auth, credential);
       await handleUserDocument(userCredential.user);
+      await sendTokenToBackend(userCredential.user); // <-- ADDED
       navigate("/dashboard", { replace: true });
     } catch (error) {
       alert(error instanceof Error ? error.message : "Authentication failed");
@@ -177,12 +193,10 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-      {/* Consistent Header */}
       <Header isAuthPage />
 
       <main className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md space-y-6">
-          {/* Tab Toggle */}
           <div className="flex justify-center">
             <div className="inline-flex rounded-full bg-gray-700">
               <button
@@ -204,21 +218,18 @@ const Login: React.FC = () => {
             </div>
           </div>
 
-          {/* Success Message */}
           {successMessage && (
             <div className="bg-green-600 text-white text-center rounded-lg py-2 mb-2">
               {successMessage}
             </div>
           )}
 
-          {/* Form Card */}
           <div className="bg-[#0f172a] p-8 rounded-2xl shadow-xl">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold">
                 {isSignUp ? "Create Account" : "Sign In"}
               </h2>
             </div>
-
             <form
               onSubmit={isSignUp ? handleSignUp : handleLogin}
               className="space-y-4"
@@ -350,3 +361,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+

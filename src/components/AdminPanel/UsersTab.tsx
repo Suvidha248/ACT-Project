@@ -15,7 +15,7 @@ const UsersTab: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://:8080/api/admin/users", {
+        const response = await fetch("http://localhost:8080/api/admin/users", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

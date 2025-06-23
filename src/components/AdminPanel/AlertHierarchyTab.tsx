@@ -11,7 +11,7 @@ interface AlertFormData {
 }
 
 const categories = ["WCS", "IT-Service", "WMS"];
-const alertLevels = ["Low", "Medium", "High"];
+const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
 
 const AlertHierarchyTab: React.FC = () => {
@@ -21,7 +21,7 @@ const AlertHierarchyTab: React.FC = () => {
   const [formData, setFormData] = useState<AlertFormData>({
     system: "WCS",
     type: "",
-    level: "Low",
+    level: "Critical",
     notification: [],
   });
 
