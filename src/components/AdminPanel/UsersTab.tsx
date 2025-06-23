@@ -12,13 +12,17 @@ const UsersTab: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
+  // Replace this with the actual idToken from your auth system
+  const idToken = localStorage.getItem("idToken") || "";
+
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await fetch("http://:8080/api/admin/users", {
+        const response = await fetch("http://localhost:8080/api/admin/users", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
           },
         });
 
@@ -34,7 +38,7 @@ const UsersTab: React.FC = () => {
     };
 
     fetchUsers();
-  }, []);
+  }, [idToken]);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.fullName

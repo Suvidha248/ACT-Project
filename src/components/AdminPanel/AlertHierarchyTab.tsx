@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
+import { FaTrash, FaPen } from "react-icons/fa";
 
 Modal.setAppElement("#root");
 
-interface AlertFormData {
+interface Alert {
+  id?: number;
   system: string;
   type: string;
   level: string;
@@ -11,19 +13,34 @@ interface AlertFormData {
 }
 
 const categories = ["WCS", "IT-Service", "WMS"];
-const alertLevels = ["Low", "Medium", "High"];
+const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
+
+const API_URL = "http://localhost:8080/api/alerts";
+const idToken = "your-auth-token-here"; // Replace this with dynamic token if needed
 
 const AlertHierarchyTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("WCS");
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-  const [formData, setFormData] = useState<AlertFormData>({
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [formData, setFormData] = useState<Alert>({
     system: "WCS",
     type: "",
-    level: "Low",
+    level: "Critical",
     notification: [],
   });
+  const [editId, setEditId] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(API_URL, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => setAlerts(data))
+      .catch((err) => console.error("Error loading alerts", err));
+  }, []);
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
@@ -47,8 +64,55 @@ const AlertHierarchyTab: React.FC = () => {
     }));
   };
 
-  const handleSave = () => {
-    console.log("Saved alert:", formData);
+  const openAddModal = () => {
+    setFormData({
+      system: selectedCategory,
+      type: "",
+      level: "Critical",
+      notification: [],
+    });
+    setEditId(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (alert: Alert) => {
+    setFormData(alert);
+    setEditId(alert.id || null);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id?: number) => {
+    if (!id) return;
+    await fetch(`${API_URL}/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleSave = async () => {
+    const method = editId ? "PUT" : "POST";
+    const url = editId ? `${API_URL}/${editId}` : API_URL;
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(formData),
+    });
+
+    const saved = await res.json();
+
+    if (editId) {
+      setAlerts((prev) => prev.map((a) => (a.id === editId ? saved : a)));
+    } else {
+      setAlerts((prev) => [...prev, saved]);
+    }
+
     setIsModalOpen(false);
   };
 
@@ -75,10 +139,48 @@ const AlertHierarchyTab: React.FC = () => {
       <div className="text-right mb-4">
         <button
           className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium"
-          onClick={() => setIsModalOpen(true)}
+          onClick={openAddModal}
         >
           + Add
         </button>
+      </div>
+
+      {/* Alerts list for selected category */}
+      <div className="space-y-4">
+        {alerts
+          .filter((a) => a.system === selectedCategory)
+          .map((alert) => (
+            <div
+              key={alert.id}
+              className="bg-slate-700 p-4 rounded flex justify-between items-center"
+            >
+              <div>
+                <p>
+                  <strong>Type:</strong> {alert.type}
+                </p>
+                <p>
+                  <strong>Level:</strong> {alert.level}
+                </p>
+                <p>
+                  <strong>Notification:</strong> {alert.notification.join(", ")}
+                </p>
+              </div>
+              <div className="flex gap-4">
+                <button
+                  className="text-blue-400 hover:text-blue-600"
+                  onClick={() => handleEdit(alert)}
+                >
+                  <FaPen />
+                </button>
+                <button
+                  className="text-red-400 hover:text-red-600"
+                  onClick={() => handleDelete(alert.id)}
+                >
+                  <FaTrash />
+                </button>
+              </div>
+            </div>
+          ))}
       </div>
 
       {/* Modal */}
@@ -89,7 +191,7 @@ const AlertHierarchyTab: React.FC = () => {
         overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
       >
         <h3 className="text-xl font-bold text-white mb-6">
-          Add Alert - {selectedCategory}
+          {editId ? "Edit" : "Add"} Alert - {selectedCategory}
         </h3>
 
         <div className="space-y-4 text-sm">
@@ -160,7 +262,7 @@ const AlertHierarchyTab: React.FC = () => {
             onClick={handleSave}
             className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold"
           >
-            Save
+            {editId ? "Update" : "Save"}
           </button>
         </div>
       </Modal>
