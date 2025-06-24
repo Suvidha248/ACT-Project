@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { fetchUsers } from "../../services/userService";
 
 interface User {
   fullName: string;
@@ -12,41 +13,19 @@ const UsersTab: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
-  // Replace this with the actual idToken from your auth system
-  const idToken = localStorage.getItem("idToken") || "";
-
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("http://localhost:8080/api/admin/users", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data: User[] = await response.json();
-        setUsers(data);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
+    const fetchData = async () => {
+      const fetchedUsers = await fetchUsers();
+      setUsers(fetchedUsers);
     };
-
-    fetchUsers();
-  }, [idToken]);
+    fetchData();
+  }, []);
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.fullName
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesRole = selectedRole
-      ? user.role.toLowerCase().includes(selectedRole.toLowerCase())
-      : true;
+    const matchesRole = selectedRole ? user.role === selectedRole : true;
     return matchesSearch && matchesRole;
   });
 
@@ -58,7 +37,6 @@ const UsersTab: React.FC = () => {
 
   return (
     <div className="text-white">
-      {/* Search & Filter */}
       <div className="flex justify-between items-center mb-4">
         <input
           type="text"
@@ -82,7 +60,6 @@ const UsersTab: React.FC = () => {
         </select>
       </div>
 
-      {/* User Table */}
       <div className="bg-slate-800 rounded-lg overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -126,7 +103,6 @@ const UsersTab: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-4 space-x-4 text-sm">
           <button

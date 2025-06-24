@@ -1,15 +1,18 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
 import { FaTrash, FaPen } from "react-icons/fa";
+import { fetchUsers, User } from "../../services/userService";
 
 Modal.setAppElement("#root");
 
 interface Alert {
-  id?: number;
+  id?: string;
   system: string;
   type: string;
   level: string;
   notification: string[];
+  role?: string;
+  fullNames?: string[];
 }
 
 const categories = ["WCS", "IT-Service", "WMS"];
@@ -17,19 +20,21 @@ const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
 
 const API_URL = "http://localhost:8080/api/alerts";
-const idToken = "your-auth-token-here"; // Replace this with dynamic token if needed
+const idToken = sessionStorage.getItem("idToken") || "";
 
 const AlertHierarchyTab: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("WCS");
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedCategory, setSelectedCategory] = useState("WCS");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [formData, setFormData] = useState<Alert>({
     system: "WCS",
     type: "",
     level: "Critical",
     notification: [],
+    role: "",
+    fullNames: [],
   });
-  const [editId, setEditId] = useState<number | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
     fetch(API_URL, {
@@ -40,6 +45,8 @@ const AlertHierarchyTab: React.FC = () => {
       .then((res) => res.json())
       .then((data) => setAlerts(data))
       .catch((err) => console.error("Error loading alerts", err));
+
+    fetchUsers().then(setUsers).catch(console.error);
   }, []);
 
   const handleCategoryClick = (category: string) => {
@@ -52,6 +59,13 @@ const AlertHierarchyTab: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "role") {
+      const filteredNames = users
+        .filter((user) => user.role === value)
+        .map((user) => user.fullName);
+      setFormData((prev) => ({ ...prev, fullNames: filteredNames }));
+    }
   };
 
   const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,18 +84,18 @@ const AlertHierarchyTab: React.FC = () => {
       type: "",
       level: "Critical",
       notification: [],
+      role: "",
+      fullNames: [],
     });
-    setEditId(null);
     setIsModalOpen(true);
   };
 
   const handleEdit = (alert: Alert) => {
     setFormData(alert);
-    setEditId(alert.id || null);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id?: number) => {
+  const handleDelete = async (id?: string) => {
     if (!id) return;
     await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
@@ -93,8 +107,8 @@ const AlertHierarchyTab: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const method = editId ? "PUT" : "POST";
-    const url = editId ? `${API_URL}/${editId}` : API_URL;
+    const method = formData.id ? "PUT" : "POST";
+    const url = formData.id ? `${API_URL}/${formData.id}` : API_URL;
 
     const res = await fetch(url, {
       method,
@@ -106,9 +120,8 @@ const AlertHierarchyTab: React.FC = () => {
     });
 
     const saved = await res.json();
-
-    if (editId) {
-      setAlerts((prev) => prev.map((a) => (a.id === editId ? saved : a)));
+    if (formData.id) {
+      setAlerts((prev) => prev.map((a) => (a.id === formData.id ? saved : a)));
     } else {
       setAlerts((prev) => [...prev, saved]);
     }
@@ -118,16 +131,16 @@ const AlertHierarchyTab: React.FC = () => {
 
   return (
     <div className="p-6 text-white">
-      {/* Category buttons */}
+      {/* Category Buttons */}
       <div className="flex space-x-4 mb-6">
         {categories.map((cat) => (
           <button
             key={cat}
             onClick={() => handleCategoryClick(cat)}
-            className={`flex-1 py-2 rounded-lg font-semibold shadow-md transition-all duration-300 ${
+            className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
               selectedCategory === cat
                 ? "bg-teal-600 text-white"
-                : "bg-slate-700 text-gray-300 hover:bg-slate-600"
+                : "bg-slate-700 text-gray-300"
             }`}
           >
             {cat}
@@ -138,14 +151,14 @@ const AlertHierarchyTab: React.FC = () => {
       {/* Add Button */}
       <div className="text-right mb-4">
         <button
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium"
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
           onClick={openAddModal}
         >
           + Add
         </button>
       </div>
 
-      {/* Alerts list for selected category */}
+      {/* Alerts List */}
       <div className="space-y-4">
         {alerts
           .filter((a) => a.system === selectedCategory)
@@ -162,19 +175,25 @@ const AlertHierarchyTab: React.FC = () => {
                   <strong>Level:</strong> {alert.level}
                 </p>
                 <p>
-                  <strong>Notification:</strong> {alert.notification.join(", ")}
+                  <strong>Role:</strong> {alert.role}
+                </p>
+                <p>
+                  <strong>Users:</strong> {alert.fullNames?.join(", ")}
+                </p>
+                <p>
+                  <strong>Notify:</strong> {alert.notification.join(", ")}
                 </p>
               </div>
               <div className="flex gap-4">
                 <button
-                  className="text-blue-400 hover:text-blue-600"
                   onClick={() => handleEdit(alert)}
+                  className="text-blue-400"
                 >
                   <FaPen />
                 </button>
                 <button
-                  className="text-red-400 hover:text-red-600"
                   onClick={() => handleDelete(alert.id)}
+                  className="text-red-400"
                 >
                   <FaTrash />
                 </button>
@@ -187,82 +206,73 @@ const AlertHierarchyTab: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
-        className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl focus:outline-none"
+        className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl"
         overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
       >
         <h3 className="text-xl font-bold text-white mb-6">
-          {editId ? "Edit" : "Add"} Alert - {selectedCategory}
+          {formData.id ? "Edit" : "Add"} Alert - {selectedCategory}
         </h3>
 
-        <div className="space-y-4 text-sm">
-          <div>
-            <label className="block mb-1 text-gray-300">System</label>
-            <input
-              name="system"
-              value={formData.system}
-              readOnly
-              className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-gray-300">Type</label>
-            <input
-              name="type"
-              value={formData.type}
-              onChange={handleInputChange}
-              placeholder="e.g., Crane"
-              className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
-            />
-          </div>
-
-          <div>
-            <label className="block mb-1 text-gray-300">Alert Level</label>
-            <select
-              name="level"
-              value={formData.level}
-              onChange={handleInputChange}
-              className="w-full bg-slate-700 text-white px-3 py-2 rounded border border-slate-600"
-            >
-              {alertLevels.map((lvl) => (
-                <option key={lvl} value={lvl}>
-                  {lvl}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block mb-1 text-gray-300">Notification</label>
-            <div className="flex gap-4">
-              {notifications.map((n) => (
-                <label key={n} className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    value={n}
-                    checked={formData.notification.includes(n)}
-                    onChange={handleNotificationChange}
-                    className="accent-teal-500"
-                  />
-                  <span>{n}</span>
-                </label>
-              ))}
-            </div>
+        <div className="space-y-4">
+          <input
+            name="type"
+            value={formData.type}
+            onChange={handleInputChange}
+            placeholder="Type"
+            className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+          />
+          <select
+            name="level"
+            value={formData.level}
+            onChange={handleInputChange}
+            className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+          >
+            {alertLevels.map((lvl) => (
+              <option key={lvl} value={lvl}>
+                {lvl}
+              </option>
+            ))}
+          </select>
+          <select
+            name="role"
+            value={formData.role}
+            onChange={handleInputChange}
+            className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+          >
+            <option value="">Select Role</option>
+            {[...new Set(users.map((u) => u.role))].map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
+          </select>
+          <div className="flex gap-4">
+            {notifications.map((n) => (
+              <label key={n} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  value={n}
+                  checked={formData.notification.includes(n)}
+                  onChange={handleNotificationChange}
+                />
+                <span>{n}</span>
+              </label>
+            ))}
           </div>
         </div>
 
         <div className="mt-6 flex justify-end space-x-3">
           <button
             onClick={() => setIsModalOpen(false)}
-            className="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded"
+            className="bg-slate-600 text-white px-4 py-2 rounded"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
-            className="bg-teal-600 hover:bg-teal-700 text-white px-6 py-2 rounded font-semibold"
+            className="bg-teal-600 text-white px-6 py-2 rounded font-semibold"
           >
-            {editId ? "Update" : "Save"}
+            {formData.id ? "Update" : "Save"}
           </button>
         </div>
       </Modal>
