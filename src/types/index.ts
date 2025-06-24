@@ -1,6 +1,17 @@
-export type IncidentStatus = 'new' | 'acknowledged' | 'in-progress' | 'resolved' | 'closed';
-export type IncidentPriority = 'low' | 'medium' | 'high' | 'critical';
-export type AlertType = 'temperature' | 'humidity' | 'security' | 'equipment' | 'inventory' | 'safety';
+export type IncidentStatus =
+  | "new"
+  | "acknowledged"
+  | "in-progress"
+  | "resolved"
+  | "closed";
+export type IncidentPriority = "low" | "medium" | "high" | "critical";
+export type AlertType =
+  | "temperature"
+  | "humidity"
+  | "security"
+  | "equipment"
+  | "inventory"
+  | "safety";
 
 export interface User {
   id: string;
@@ -46,4 +57,19 @@ export interface IncidentStats {
   resolved: number;
   closed: number;
   overdue: number;
+}
+
+export interface Alert {
+  id?: number;
+  system: string;
+  type: string;
+  level: string;
+  notification: string[];
+  role?: string;
+  fullName?: string;
+}
+
+export interface User {
+  fullName: string;
+  role: string;
 }
