@@ -1,16 +1,22 @@
 import React, { useEffect, useState } from "react";
+import Modal from "react-modal";
 import { fetchUsers } from "../../services/userService";
 
 interface User {
+  id?: number;
   fullName: string;
   role: string;
 }
+
+Modal.setAppElement("#root");
 
 const UsersTab: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editableUser, setEditableUser] = useState<User | null>(null);
   const usersPerPage = 10;
 
   useEffect(() => {
@@ -20,6 +26,40 @@ const UsersTab: React.FC = () => {
     };
     fetchData();
   }, []);
+
+  const openEditModal = (user: User) => {
+    setEditableUser(user);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = (user: User) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this user?"
+    );
+    if (confirmed) {
+      setUsers((prev) => prev.filter((u) => u.fullName !== user.fullName));
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    if (editableUser) {
+      setEditableUser({ ...editableUser, [name]: value });
+    }
+  };
+
+  const handleSave = () => {
+    if (editableUser) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.fullName === editableUser.fullName ? editableUser : u
+        )
+      );
+      setIsModalOpen(false);
+    }
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch = user.fullName
@@ -83,10 +123,16 @@ const UsersTab: React.FC = () => {
                   <td className="p-3">{user.fullName}</td>
                   <td className="p-3">{user.role}</td>
                   <td className="p-3 space-x-2">
-                    <button className="text-blue-400 hover:underline">
+                    <button
+                      className="text-blue-400 hover:underline"
+                      onClick={() => openEditModal(user)}
+                    >
                       Edit
                     </button>
-                    <button className="text-red-400 hover:underline">
+                    <button
+                      className="text-red-400 hover:underline"
+                      onClick={() => handleDelete(user)}
+                    >
                       Delete
                     </button>
                   </td>
@@ -103,6 +149,7 @@ const UsersTab: React.FC = () => {
         </table>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-4 space-x-4 text-sm">
           <button
@@ -124,6 +171,52 @@ const UsersTab: React.FC = () => {
           </button>
         </div>
       )}
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onRequestClose={() => setIsModalOpen(false)}
+        className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl"
+        overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+      >
+        <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
+        <div className="space-y-4">
+          <input
+            name="fullName"
+            value={editableUser?.fullName || ""}
+            onChange={handleInputChange}
+            placeholder="Full Name"
+            className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+          />
+          <select
+            name="role"
+            value={editableUser?.role || ""}
+            onChange={handleInputChange}
+            className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+          >
+            <option value="">Select Role</option>
+            <option value="Operator">Operator</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="Technician">Technician</option>
+            <option value="ITSupport">ITSupport</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div className="mt-6 flex justify-end space-x-3">
+          <button
+            onClick={() => setIsModalOpen(false)}
+            className="bg-slate-600 text-white px-4 py-2 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="bg-teal-600 text-white px-6 py-2 rounded font-semibold"
+          >
+            Save
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 };

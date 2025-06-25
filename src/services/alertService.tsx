@@ -1,13 +1,15 @@
 import { Alert } from "../types";
 
-const API_URL = "http://localhost:8080/api/alerts";
-const idToken = sessionStorage.getItem("idToken") || "";
+const API_URL = "http://192.168.9.179:8080/api/alerts";
+
+const getHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${sessionStorage.getItem("idToken") || ""}`,
+});
 
 export const fetchAlerts = async (): Promise<Alert[]> => {
   const response = await fetch(API_URL, {
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: getHeaders(),
   });
 
   if (!response.ok) throw new Error("Failed to fetch alerts");
@@ -18,10 +20,7 @@ export const fetchAlerts = async (): Promise<Alert[]> => {
 export const createAlert = async (alertData: Alert): Promise<Alert> => {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: getHeaders(),
     body: JSON.stringify(alertData),
   });
 
@@ -31,15 +30,12 @@ export const createAlert = async (alertData: Alert): Promise<Alert> => {
 };
 
 export const updateAlert = async (
-  alertId: number,
+  alertId: string,
   alertData: Alert
 ): Promise<Alert> => {
   const response = await fetch(`${API_URL}/${alertId}`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: getHeaders(),
     body: JSON.stringify(alertData),
   });
 
@@ -48,15 +44,11 @@ export const updateAlert = async (
   return await response.json();
 };
 
-export const deleteAlert = async (alertId: number): Promise<boolean> => {
+export const deleteAlert = async (alertId: string): Promise<void> => {
   const response = await fetch(`${API_URL}/${alertId}`, {
     method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers: getHeaders(),
   });
 
   if (!response.ok) throw new Error("Failed to delete alert");
-
-  return true;
 };
