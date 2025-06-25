@@ -104,23 +104,28 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
-      );
-      await handleUserDocument(userCredential.user);
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Login failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  try {
+    const userCredential = await signInWithEmailAndPassword(
+      auth,
+      form.email,
+      form.password
+    );
+    await handleUserDocument(userCredential.user);
+
+    const idToken = await userCredential.user.getIdToken();
+    sessionStorage.setItem("idToken", idToken);
+
+    navigate("/dashboard", { replace: true });
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Login failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,25 +154,28 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSuccess = async (credentialResponse: CredentialResponse) => {
-    if (!credentialResponse.credential) {
-      alert("No credential received");
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const credential = GoogleAuthProvider.credential(
-        credentialResponse.credential
-      );
-      const userCredential = await signInWithCredential(auth, credential);
-      await handleUserDocument(userCredential.user);
-      navigate("/dashboard", { replace: true });
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Authentication failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const handleSuccess = async (credentialResponse: CredentialResponse) => {
+  if (!credentialResponse.credential) {
+    alert("No credential received");
+    return;
+  }
+  setIsLoading(true);
+  try {
+    const credential = GoogleAuthProvider.credential(credentialResponse.credential);
+    const userCredential = await signInWithCredential(auth, credential);
+    await handleUserDocument(userCredential.user);
+
+    const idToken = await userCredential.user.getIdToken();
+    sessionStorage.setItem("idToken", idToken);
+
+    navigate("/dashboard", { replace: true });
+  } catch (error) {
+    alert(error instanceof Error ? error.message : "Authentication failed");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleError = () => {
     alert("Failed to authenticate with Google. Please try again.");

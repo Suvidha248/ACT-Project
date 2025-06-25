@@ -5,19 +5,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../firebase';
 
-export function Header() {
+interface HeaderProps {
+  isAuthPage?: boolean;
+}
+
+export function Header({ isAuthPage }: HeaderProps) {
   const unreadCount = 3;
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut(auth);
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   return (
     <motion.header 
-      className="glass-card border-b border-white/10 px-6 py-4 m-4 mb-0 rounded-t-2xl"
+      className={`glass-card border-b border-white/10 px-6 py-4 m-4 mb-0 rounded-t-2xl ${isAuthPage ? 'justify-center' : ''}`}
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

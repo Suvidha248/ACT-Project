@@ -53,10 +53,11 @@ const UsersTab: React.FC = () => {
         >
           <option value="">All Roles</option>
           <option value="Operator">Operator</option>
-          <option value="Supervisor">Supervisor</option>
+          <option value="System Admin">System Admin</option>
           <option value="Technician">Technician</option>
-          <option value="ITSupport">ITSupport</option>
+          <option value="IT Support">IT Support</option>
           <option value="Maintenance">Maintenance</option>
+          <option value="Facility Support">Facility Support</option>
         </select>
       </div>
 
