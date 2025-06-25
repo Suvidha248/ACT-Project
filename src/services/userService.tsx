@@ -1,10 +1,9 @@
-// src/services/userService.ts
 export interface User {
   fullName: string;
   role: string;
 }
 
-const API_URL = "http://localhost:8080/api/admin/users";
+const API_URL = "http://192.168.9.179:8080/api/admin/users";
 
 export const fetchUsers = async (): Promise<User[]> => {
   const token = sessionStorage.getItem("idToken") || "";

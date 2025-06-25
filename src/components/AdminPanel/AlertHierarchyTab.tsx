@@ -35,15 +35,14 @@ const AlertHierarchyTab: React.FC = () => {
     fullNames: [],
   });
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredNames, setFilteredNames] = useState<string[]>([]);
 
   useEffect(() => {
     fetch(API_URL, {
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
+      headers: { Authorization: `Bearer ${idToken}` },
     })
       .then((res) => res.json())
-      .then((data) => setAlerts(data))
+      .then((data) => setAlerts(Array.isArray(data) ? data : []))
       .catch((err) => console.error("Error loading alerts", err));
 
     fetchUsers().then(setUsers).catch(console.error);
@@ -61,10 +60,11 @@ const AlertHierarchyTab: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "role") {
-      const filteredNames = users
+      const names = users
         .filter((user) => user.role === value)
         .map((user) => user.fullName);
-      setFormData((prev) => ({ ...prev, fullNames: filteredNames }));
+      setFilteredNames(names);
+      setFormData((prev) => ({ ...prev, fullNames: [] }));
     }
   };
 
@@ -78,6 +78,14 @@ const AlertHierarchyTab: React.FC = () => {
     }));
   };
 
+  const handleFullNameSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedOptions = Array.from(
+      e.target.selectedOptions,
+      (option) => option.value
+    );
+    setFormData((prev) => ({ ...prev, fullNames: selectedOptions }));
+  };
+
   const openAddModal = () => {
     setFormData({
       system: selectedCategory,
@@ -87,11 +95,16 @@ const AlertHierarchyTab: React.FC = () => {
       role: "",
       fullNames: [],
     });
+    setFilteredNames([]);
     setIsModalOpen(true);
   };
 
   const handleEdit = (alert: Alert) => {
     setFormData(alert);
+    const names = users
+      .filter((user) => user.role === alert.role)
+      .map((user) => user.fullName);
+    setFilteredNames(names);
     setIsModalOpen(true);
   };
 
@@ -99,9 +112,7 @@ const AlertHierarchyTab: React.FC = () => {
     if (!id) return;
     await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
+      headers: { Authorization: `Bearer ${idToken}` },
     });
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
@@ -246,7 +257,24 @@ const AlertHierarchyTab: React.FC = () => {
               </option>
             ))}
           </select>
-          <div className="flex gap-4">
+
+          {/* Full Name dropdown based on role */}
+          {filteredNames.length > 0 && (
+            <select
+              multiple
+              onChange={handleFullNameSelect}
+              value={formData.fullNames}
+              className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+            >
+              {filteredNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="flex gap-4 mt-2">
             {notifications.map((n) => (
               <label key={n} className="flex items-center space-x-2">
                 <input
