@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
 import { FaTrash, FaPen } from "react-icons/fa";
 import { fetchUsers, User } from "../../services/userService";
+import { getAuth } from "firebase/auth";
 
 Modal.setAppElement("#root");
 
@@ -20,7 +21,6 @@ const categories = ["WES", "IT-Service", "WMS"];
 const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
 const API_URL = "http://localhost:8080/api/alerts";
-const hardcodedToken = "your_hardcoded_jwt_token_here";
 
 const AlertHierarchyTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("WES");
@@ -38,15 +38,39 @@ const AlertHierarchyTab: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchAlerts();
+    const refreshAndFetch = async () => {
+      const auth = getAuth();
+      const user = auth.currentUser;
+
+      try {
+        const token = await user?.getIdToken(true); // force refresh
+        if (!token) throw new Error("Unauthorized: Token missing");
+
+        sessionStorage.setItem("token", token);
+        await fetchAlerts(token);
+      } catch (err) {
+        alert("Unauthorized: Please log in again.");
+        console.error("Token error:", err);
+      }
+    };
+
+    refreshAndFetch();
     fetchUsers().then(setUsers).catch(console.error);
   }, []);
 
-  const fetchAlerts = async () => {
+  const fetchAlerts = async (token: string) => {
     try {
       const res = await fetch(API_URL, {
-        headers: { Authorization: `Bearer ${hardcodedToken}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to fetch alerts");
+      }
+
       const data = await res.json();
       if (Array.isArray(data)) setAlerts(data);
     } catch (err) {
@@ -111,16 +135,41 @@ const AlertHierarchyTab: React.FC = () => {
 
   const handleDelete = async (id?: string) => {
     if (!id) return;
-    await fetch(`${API_URL}/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${hardcodedToken}` },
-    });
-    setAlerts((prev) => prev.filter((a) => a.id !== id));
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      alert("Unauthorized: Please log in again.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Failed to delete alert");
+      }
+
+      setAlerts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Failed to delete alert: " + (err as Error).message);
+    }
   };
 
   const handleSave = async () => {
     if (!formData.type || !formData.role || !formData.fullNames?.length) {
       alert("Please fill all required fields.");
+      return;
+    }
+
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      alert("Unauthorized: Please log in again.");
       return;
     }
 
@@ -141,8 +190,8 @@ const AlertHierarchyTab: React.FC = () => {
       const res = await fetch(url, {
         method,
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          Authorization: `Bearer ${hardcodedToken}`,
         },
         body: JSON.stringify(payload),
       });
@@ -160,18 +209,15 @@ const AlertHierarchyTab: React.FC = () => {
           ? prev.map((a) => (a.id === saved.id ? saved : a))
           : [...prev, saved]
       );
-
       setIsModalOpen(false);
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.error("Save failed", error.message);
-      alert("Failed to save alert: " + error.message);
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert("Failed to save alert: " + (err as Error).message);
     }
   };
 
   return (
     <div className="p-6 text-white">
-      {/* Category Buttons */}
       <div className="flex space-x-4 mb-6">
         {categories.map((cat) => (
           <button
@@ -188,7 +234,6 @@ const AlertHierarchyTab: React.FC = () => {
         ))}
       </div>
 
-      {/* Add Button */}
       <div className="text-right mb-4">
         <button
           className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
@@ -198,7 +243,6 @@ const AlertHierarchyTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Alerts List */}
       <div className="space-y-4">
         {alerts
           .filter((a) => a.system === selectedCategory)
@@ -242,7 +286,6 @@ const AlertHierarchyTab: React.FC = () => {
           ))}
       </div>
 
-      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}

@@ -14,10 +14,9 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
 import LoadingSpinner from "../LoadingSpinner";
-// import { Header } from 'src\components\Layout\Header'; // Ensure this is your dashboard-style header
+
 import { Header } from "../components/Layout/Header";
 
-// Options from your user dataset
 const departmentOptions = [
   "Admin",
   "Leadership",
@@ -104,28 +103,27 @@ const Login: React.FC = () => {
     }
   };
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  try {
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      form.email,
-      form.password
-    );
-    await handleUserDocument(userCredential.user);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
+      await handleUserDocument(userCredential.user);
 
-    const idToken = await userCredential.user.getIdToken();
-    sessionStorage.setItem("idToken", idToken);
+      const idToken = await userCredential.user.getIdToken();
+      sessionStorage.setItem("idToken", idToken);
 
-    navigate("/dashboard", { replace: true });
-  } catch (error) {
-    alert(error instanceof Error ? error.message : "Login failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,28 +152,29 @@ const handleLogin = async (e: React.FormEvent) => {
     }
   };
 
-const handleSuccess = async (credentialResponse: CredentialResponse) => {
-  if (!credentialResponse.credential) {
-    alert("No credential received");
-    return;
-  }
-  setIsLoading(true);
-  try {
-    const credential = GoogleAuthProvider.credential(credentialResponse.credential);
-    const userCredential = await signInWithCredential(auth, credential);
-    await handleUserDocument(userCredential.user);
+  const handleSuccess = async (credentialResponse: CredentialResponse) => {
+    if (!credentialResponse.credential) {
+      alert("No credential received");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const credential = GoogleAuthProvider.credential(
+        credentialResponse.credential
+      );
+      const userCredential = await signInWithCredential(auth, credential);
+      await handleUserDocument(userCredential.user);
 
-    const idToken = await userCredential.user.getIdToken();
-    sessionStorage.setItem("idToken", idToken);
+      const idToken = await userCredential.user.getIdToken();
+      sessionStorage.setItem("idToken", idToken);
 
-    navigate("/dashboard", { replace: true });
-  } catch (error) {
-    alert(error instanceof Error ? error.message : "Authentication failed");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Authentication failed");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleError = () => {
     alert("Failed to authenticate with Google. Please try again.");
