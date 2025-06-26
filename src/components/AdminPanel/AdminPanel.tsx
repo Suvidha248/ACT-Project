@@ -1,13 +1,18 @@
 import React, { useState } from "react";
 import UsersTab from "./UsersTab";
 import AlertHierarchyTab from "./AlertHierarchyTab";
+import { useAuth } from "../../context/AuthContext";
 
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"users" | "alerts">("users");
+  const { profile } = useAuth();
 
   return (
     <div className="p-6 text-white">
-      <h2 className="text-3xl font-bold gradient-text mb-4">Users</h2>
+      <h2 className="text-3xl font-bold gradient-text mb-4">
+        User Management
+        {profile?.facilityName ? ` - ${profile.facilityName}` : ""}
+      </h2>
 
       <div className="flex mb-6 w-full rounded-lg overflow-hidden border border-slate-600">
         <button

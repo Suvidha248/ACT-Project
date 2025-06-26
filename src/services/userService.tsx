@@ -1,4 +1,3 @@
-// src/services/userService.ts
 export interface User {
   fullName: string;
   role: string;

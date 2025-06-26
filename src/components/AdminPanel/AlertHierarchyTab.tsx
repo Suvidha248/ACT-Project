@@ -13,41 +13,46 @@ interface Alert {
   notification: string[];
   role?: string;
   fullNames?: string[];
+  fullName?: string;
 }
 
-const categories = ["WCS", "IT-Service", "WMS"];
+const categories = ["WES", "IT-Service", "WMS"];
 const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
-
 const API_URL = "http://localhost:8080/api/alerts";
-const idToken = sessionStorage.getItem("idToken") || "";
+const hardcodedToken = "your_hardcoded_jwt_token_here";
 
 const AlertHierarchyTab: React.FC = () => {
-  const [selectedCategory, setSelectedCategory] = useState("WCS");
+  const [selectedCategory, setSelectedCategory] = useState("WES");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredNames, setFilteredNames] = useState<string[]>([]);
   const [formData, setFormData] = useState<Alert>({
-    system: "WCS",
+    system: "WES",
     type: "",
     level: "Critical",
     notification: [],
     role: "",
     fullNames: [],
   });
-  const [users, setUsers] = useState<User[]>([]);
 
   useEffect(() => {
-    fetch(API_URL, {
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setAlerts(data))
-      .catch((err) => console.error("Error loading alerts", err));
-
+    fetchAlerts();
     fetchUsers().then(setUsers).catch(console.error);
   }, []);
+
+  const fetchAlerts = async () => {
+    try {
+      const res = await fetch(API_URL, {
+        headers: { Authorization: `Bearer ${hardcodedToken}` },
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) setAlerts(data);
+    } catch (err) {
+      console.error("Failed to load alerts", err);
+    }
+  };
 
   const handleCategoryClick = (category: string) => {
     setSelectedCategory(category);
@@ -61,10 +66,11 @@ const AlertHierarchyTab: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "role") {
-      const filteredNames = users
+      const names = users
         .filter((user) => user.role === value)
         .map((user) => user.fullName);
-      setFormData((prev) => ({ ...prev, fullNames: filteredNames }));
+      setFilteredNames(names);
+      setFormData((prev) => ({ ...prev, fullNames: [] }));
     }
   };
 
@@ -87,11 +93,19 @@ const AlertHierarchyTab: React.FC = () => {
       role: "",
       fullNames: [],
     });
+    setFilteredNames([]);
     setIsModalOpen(true);
   };
 
   const handleEdit = (alert: Alert) => {
-    setFormData(alert);
+    setFormData({
+      ...alert,
+      fullNames: alert.fullName ? [alert.fullName] : [],
+    });
+    const names = users
+      .filter((user) => user.role === alert.role)
+      .map((user) => user.fullName);
+    setFilteredNames(names);
     setIsModalOpen(true);
   };
 
@@ -99,34 +113,60 @@ const AlertHierarchyTab: React.FC = () => {
     if (!id) return;
     await fetch(`${API_URL}/${id}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
+      headers: { Authorization: `Bearer ${hardcodedToken}` },
     });
     setAlerts((prev) => prev.filter((a) => a.id !== id));
   };
 
   const handleSave = async () => {
-    const method = formData.id ? "PUT" : "POST";
-    const url = formData.id ? `${API_URL}/${formData.id}` : API_URL;
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${idToken}`,
-      },
-      body: JSON.stringify(formData),
-    });
-
-    const saved = await res.json();
-    if (formData.id) {
-      setAlerts((prev) => prev.map((a) => (a.id === formData.id ? saved : a)));
-    } else {
-      setAlerts((prev) => [...prev, saved]);
+    if (!formData.type || !formData.role || !formData.fullNames?.length) {
+      alert("Please fill all required fields.");
+      return;
     }
 
-    setIsModalOpen(false);
+    const isEdit = !!formData.id;
+    const url = isEdit ? `${API_URL}/${formData.id}` : API_URL;
+    const method = isEdit ? "PUT" : "POST";
+
+    const payload = {
+      system: formData.system,
+      type: formData.type,
+      level: formData.level,
+      notification: formData.notification,
+      role: formData.role,
+      fullName: formData.fullNames[0],
+    };
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${hardcodedToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      const saved = text ? JSON.parse(text) : null;
+
+      if (!res.ok) {
+        console.error("Server error:", saved);
+        throw new Error(saved?.error || "Unknown server error");
+      }
+
+      setAlerts((prev) =>
+        isEdit
+          ? prev.map((a) => (a.id === saved.id ? saved : a))
+          : [...prev, saved]
+      );
+
+      setIsModalOpen(false);
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Save failed", error.message);
+      alert("Failed to save alert: " + error.message);
+    }
   };
 
   return (
@@ -178,7 +218,7 @@ const AlertHierarchyTab: React.FC = () => {
                   <strong>Role:</strong> {alert.role}
                 </p>
                 <p>
-                  <strong>Users:</strong> {alert.fullNames?.join(", ")}
+                  <strong>User:</strong> {alert.fullName}
                 </p>
                 <p>
                   <strong>Notify:</strong> {alert.notification.join(", ")}
@@ -218,9 +258,16 @@ const AlertHierarchyTab: React.FC = () => {
             name="type"
             value={formData.type}
             onChange={handleInputChange}
-            placeholder="Type"
+            placeholder={
+              selectedCategory === "WES"
+                ? "e.g. Crane"
+                : selectedCategory === "IT-Service"
+                ? "e.g. Server"
+                : "e.g. Conveyor"
+            }
             className="w-full bg-slate-700 text-white px-3 py-2 rounded"
           />
+
           <select
             name="level"
             value={formData.level}
@@ -233,6 +280,7 @@ const AlertHierarchyTab: React.FC = () => {
               </option>
             ))}
           </select>
+
           <select
             name="role"
             value={formData.role}
@@ -246,7 +294,28 @@ const AlertHierarchyTab: React.FC = () => {
               </option>
             ))}
           </select>
-          <div className="flex gap-4">
+
+          {filteredNames.length > 0 && (
+            <select
+              name="fullName"
+              value={formData.fullNames?.[0] || ""}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  fullNames: [e.target.value],
+                }))
+              }
+              className="w-full bg-slate-700 text-white px-3 py-2 rounded"
+            >
+              {filteredNames.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="flex gap-4 mt-2">
             {notifications.map((n) => (
               <label key={n} className="flex items-center space-x-2">
                 <input

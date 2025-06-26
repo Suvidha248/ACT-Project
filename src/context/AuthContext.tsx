@@ -16,6 +16,7 @@ interface UserProfile {
   fullName: string;
   username: string;
   department: string;
+  facilityName?: string;
   role: string;
   group: string;
   photoURL?: string;
