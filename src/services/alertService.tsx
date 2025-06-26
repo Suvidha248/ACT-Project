@@ -1,6 +1,6 @@
 import { Alert } from "../types";
 
-const API_URL = "http://192.168.9.179:8080/api/alerts";
+const API_URL = "http://localhost:8080/api/alerts";
 
 const getHeaders = () => ({
   "Content-Type": "application/json",
