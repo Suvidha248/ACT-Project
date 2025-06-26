@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
+import { FaPen, FaTrash } from "react-icons/fa";
 import Modal from "react-modal";
-import { FaTrash, FaPen } from "react-icons/fa";
 import { fetchUsers, User } from "../../services/userService";
 
 Modal.setAppElement("#root");
@@ -20,7 +20,7 @@ const categories = ["WES", "IT-Service", "WMS"];
 const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
 const API_URL = "http://localhost:8080/api/alerts";
-const hardcodedToken = "your_hardcoded_jwt_token_here";
+// const hardcodedToken = "your_hardcoded_jwt_token_here";
 
 const AlertHierarchyTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("WES");
