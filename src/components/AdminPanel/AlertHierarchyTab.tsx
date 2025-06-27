@@ -2,6 +2,9 @@ import { getAuth } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import { FaPen, FaTrash } from "react-icons/fa";
 import Modal from "react-modal";
+
+import { FaTrash, FaPen, FaPlus } from "react-icons/fa";
+
 import { fetchUsers, User } from "../../services/userService";
 
 Modal.setAppElement("#root");
@@ -38,39 +41,34 @@ const AlertHierarchyTab: React.FC = () => {
   });
 
   useEffect(() => {
-    const refreshAndFetch = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
+    const loadAlerts = async () => {
+      let token = sessionStorage.getItem("token");
 
-      try {
-        const token = await user?.getIdToken(true); // force refresh
-        if (!token) throw new Error("Unauthorized: Token missing");
-
-        sessionStorage.setItem("token", token);
-        await fetchAlerts(token);
-      } catch (err) {
-        alert("Unauthorized: Please log in again.");
-        console.error("Token error:", err);
+      if (!token) {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (user) {
+          token = await user.getIdToken(true);
+          sessionStorage.setItem("token", token);
+        } else {
+          alert("Unauthorized: Please log in again.");
+          return;
+        }
       }
+
+      await fetchAlerts(token);
     };
 
-    refreshAndFetch();
+    loadAlerts();
     fetchUsers().then(setUsers).catch(console.error);
   }, []);
 
   const fetchAlerts = async (token: string) => {
     try {
       const res = await fetch(API_URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to fetch alerts");
-      }
-
+      if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       if (Array.isArray(data)) setAlerts(data);
     } catch (err) {
@@ -91,8 +89,8 @@ const AlertHierarchyTab: React.FC = () => {
 
     if (name === "role") {
       const names = users
-        .filter((user) => user.role === value)
-        .map((user) => user.fullName);
+        .filter((u) => u.role === value)
+        .map((u) => u.fullName);
       setFilteredNames(names);
       setFormData((prev) => ({ ...prev, fullNames: [] }));
     }
@@ -127,8 +125,8 @@ const AlertHierarchyTab: React.FC = () => {
       fullNames: alert.fullName ? [alert.fullName] : [],
     });
     const names = users
-      .filter((user) => user.role === alert.role)
-      .map((user) => user.fullName);
+      .filter((u) => u.role === alert.role)
+      .map((u) => u.fullName);
     setFilteredNames(names);
     setIsModalOpen(true);
   };
@@ -140,21 +138,13 @@ const AlertHierarchyTab: React.FC = () => {
       alert("Unauthorized: Please log in again.");
       return;
     }
-
     try {
       const res = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(errorText || "Failed to delete alert");
-      }
-
-      setAlerts((prev) => prev.filter((a) => a.id !== id));
+      if (!res.ok) throw new Error(await res.text());
+      await fetchAlerts(token); // 🔥 Refresh alerts after delete
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Failed to delete alert: " + (err as Error).message);
@@ -166,17 +156,14 @@ const AlertHierarchyTab: React.FC = () => {
       alert("Please fill all required fields.");
       return;
     }
-
     const token = sessionStorage.getItem("token");
     if (!token) {
       alert("Unauthorized: Please log in again.");
       return;
     }
-
     const isEdit = !!formData.id;
     const url = isEdit ? `${API_URL}/${formData.id}` : API_URL;
     const method = isEdit ? "PUT" : "POST";
-
     const payload = {
       system: formData.system,
       type: formData.type,
@@ -185,7 +172,6 @@ const AlertHierarchyTab: React.FC = () => {
       role: formData.role,
       fullName: formData.fullNames[0],
     };
-
     try {
       const res = await fetch(url, {
         method,
@@ -195,21 +181,9 @@ const AlertHierarchyTab: React.FC = () => {
         },
         body: JSON.stringify(payload),
       });
-
-      const text = await res.text();
-      const saved = text ? JSON.parse(text) : null;
-
-      if (!res.ok) {
-        console.error("Server error:", saved);
-        throw new Error(saved?.error || "Unknown server error");
-      }
-
-      setAlerts((prev) =>
-        isEdit
-          ? prev.map((a) => (a.id === saved.id ? saved : a))
-          : [...prev, saved]
-      );
+      if (!res.ok) throw new Error("Failed to save alert.");
       setIsModalOpen(false);
+      await fetchAlerts(token); // 🔥 Always refresh from DB after save
     } catch (err) {
       console.error("Save failed:", err);
       alert("Failed to save alert: " + (err as Error).message);
@@ -218,6 +192,7 @@ const AlertHierarchyTab: React.FC = () => {
 
   return (
     <div className="p-6 text-white">
+      {/* Category Buttons */}
       <div className="flex space-x-4 mb-6">
         {categories.map((cat) => (
           <button
@@ -226,91 +201,84 @@ const AlertHierarchyTab: React.FC = () => {
             className={`flex-1 py-2 rounded-lg font-semibold transition-all ${
               selectedCategory === cat
                 ? "bg-teal-600 text-white"
-                : "bg-slate-700 text-gray-300"
+                : "bg-slate-700 text-gray-300 hover:bg-slate-600"
             }`}
           >
             {cat}
           </button>
         ))}
-      </div>
-
-      <div className="text-right mb-4">
         <button
-          className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
           onClick={openAddModal}
+          className="ml-auto flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
         >
-          + Add
+          <FaPlus /> <span>Add Alert</span>
         </button>
       </div>
 
-      <div className="space-y-4">
-        {alerts
-          .filter((a) => a.system === selectedCategory)
-          .map((alert) => (
-            <div
-              key={alert.id}
-              className="bg-slate-700 p-4 rounded flex justify-between items-center"
-            >
-              <div>
-                <p>
-                  <strong>Type:</strong> {alert.type}
-                </p>
-                <p>
-                  <strong>Level:</strong> {alert.level}
-                </p>
-                <p>
-                  <strong>Role:</strong> {alert.role}
-                </p>
-                <p>
-                  <strong>User:</strong> {alert.fullName}
-                </p>
-                <p>
-                  <strong>Notify:</strong> {alert.notification.join(", ")}
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => handleEdit(alert)}
-                  className="text-blue-400"
+      {/* Alerts Table */}
+      <div className="bg-slate-800 rounded-lg overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-700 text-teal-400 text-sm uppercase">
+              <th className="p-3">Type</th>
+              <th className="p-3">Level</th>
+              <th className="p-3">Role</th>
+              <th className="p-3">User</th>
+              <th className="p-3">Notify</th>
+              <th className="p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {alerts
+              .filter((a) => a.system === selectedCategory)
+              .map((alert) => (
+                <tr
+                  key={alert.id}
+                  className="border-b border-slate-600 hover:bg-slate-700 text-sm"
                 >
-                  <FaPen />
-                </button>
-                <button
-                  onClick={() => handleDelete(alert.id)}
-                  className="text-red-400"
-                >
-                  <FaTrash />
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td className="p-3">{alert.type}</td>
+                  <td className="p-3">{alert.level}</td>
+                  <td className="p-3">{alert.role}</td>
+                  <td className="p-3">{alert.fullName}</td>
+                  <td className="p-3">{alert.notification.join(", ")}</td>
+                  <td className="p-3 space-x-2">
+                    <button
+                      onClick={() => handleEdit(alert)}
+                      className="text-blue-400 hover:underline"
+                    >
+                      <FaPen />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(alert.id)}
+                      className="text-red-400 hover:underline"
+                    >
+                      <FaTrash />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
       </div>
 
+      {/* Modal */}
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
         className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl"
         overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
       >
-        <h3 className="text-xl font-bold text-white mb-6">
-          {formData.id ? "Edit" : "Add"} Alert - {selectedCategory}
+        <h3 className="text-xl font-bold mb-6">
+          {formData.id ? "Edit Alert" : "Add Alert"} - {selectedCategory}
         </h3>
-
         <div className="space-y-4">
           <input
             name="type"
             value={formData.type}
             onChange={handleInputChange}
-            placeholder={
-              selectedCategory === "WES"
-                ? "e.g. Crane"
-                : selectedCategory === "IT-Service"
-                ? "e.g. Server"
-                : "e.g. Conveyor"
-            }
+            placeholder="Type"
             className="w-full bg-slate-700 text-white px-3 py-2 rounded"
           />
-
           <select
             name="level"
             value={formData.level}
@@ -323,7 +291,6 @@ const AlertHierarchyTab: React.FC = () => {
               </option>
             ))}
           </select>
-
           <select
             name="role"
             value={formData.role}
@@ -337,7 +304,6 @@ const AlertHierarchyTab: React.FC = () => {
               </option>
             ))}
           </select>
-
           {filteredNames.length > 0 && (
             <select
               name="fullName"
@@ -357,8 +323,7 @@ const AlertHierarchyTab: React.FC = () => {
               ))}
             </select>
           )}
-
-          <div className="flex gap-4 mt-2">
+          <div className="flex gap-4">
             {notifications.map((n) => (
               <label key={n} className="flex items-center space-x-2">
                 <input
@@ -372,7 +337,6 @@ const AlertHierarchyTab: React.FC = () => {
             ))}
           </div>
         </div>
-
         <div className="mt-6 flex justify-end space-x-3">
           <button
             onClick={() => setIsModalOpen(false)}
