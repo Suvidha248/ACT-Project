@@ -30,7 +30,7 @@ export const createAlert = async (alertData: Alert): Promise<Alert> => {
 };
 
 export const updateAlert = async (
-  alertId: string,
+  alertId: number,
   alertData: Alert
 ): Promise<Alert> => {
   const response = await fetch(`${API_URL}/${alertId}`, {
@@ -44,7 +44,7 @@ export const updateAlert = async (
   return await response.json();
 };
 
-export const deleteAlert = async (alertId: string): Promise<void> => {
+export const deleteAlert = async (alertId: number): Promise<void> => {
   const response = await fetch(`${API_URL}/${alertId}`, {
     method: "DELETE",
     headers: getHeaders(),

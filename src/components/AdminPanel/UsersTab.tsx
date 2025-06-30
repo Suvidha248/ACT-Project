@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
-import { fetchUsers } from "../../services/userService";
+import {
+  fetchUsers,
+  editUser,
+  deleteUser,
+  fetchRoles,
+} from "../../services/userService";
 
 interface User {
-  id?: number;
+  id: number;
   fullName: string;
   role: string;
 }
@@ -12,33 +17,38 @@ Modal.setAppElement("#root");
 
 const UsersTab: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editableUser, setEditableUser] = useState<User | null>(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<User | null>(null);
   const usersPerPage = 10;
 
   useEffect(() => {
     const fetchData = async () => {
-      const fetchedUsers = await fetchUsers();
-      setUsers(fetchedUsers);
+      try {
+        const [fetchedUsers, fetchedRoles] = await Promise.all([
+          fetchUsers(),
+          fetchRoles(),
+        ]);
+        setUsers(fetchedUsers);
+        setRoles(fetchedRoles);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to load users or roles.");
+      }
     };
     fetchData();
   }, []);
 
   const openEditModal = (user: User) => {
-    setEditableUser(user);
+    setEditableUser({
+      ...user,
+      role: user.role || roles[0] || "", // default to first role if role is empty
+    });
     setIsModalOpen(true);
-  };
-
-  const handleDelete = (user: User) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this user?"
-    );
-    if (confirmed) {
-      setUsers((prev) => prev.filter((u) => u.fullName !== user.fullName));
-    }
   };
 
   const handleInputChange = (
@@ -50,15 +60,40 @@ const UsersTab: React.FC = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editableUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.fullName === editableUser.fullName ? editableUser : u
-        )
-      );
-      setIsModalOpen(false);
+      try {
+        const updated = await editUser(editableUser);
+        setUsers((prev) =>
+          prev.map((u) => (u.id === updated.id ? updated : u))
+        );
+        setIsModalOpen(false);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to save user changes.");
+      }
     }
+  };
+
+  const handleDelete = (user: User) => {
+    setDeleteUserTarget(user);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteUserTarget) {
+      try {
+        await deleteUser(deleteUserTarget.id);
+        setUsers((prev) => prev.filter((u) => u.id !== deleteUserTarget.id));
+        setDeleteUserTarget(null);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to delete user.");
+      }
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteUserTarget(null);
   };
 
   const filteredUsers = users.filter((user) => {
@@ -92,12 +127,11 @@ const UsersTab: React.FC = () => {
           onChange={(e) => setSelectedRole(e.target.value)}
         >
           <option value="">All Roles</option>
-          <option value="Operator">Operator</option>
-          <option value="System Admin">System Admin</option>
-          <option value="Technician">Technician</option>
-          <option value="IT Support">IT Support</option>
-          <option value="Maintenance">Maintenance</option>
-          <option value="Facility Support">Facility Support</option>
+          {roles.map((role) => (
+            <option key={role} value={role}>
+              {role}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -115,7 +149,7 @@ const UsersTab: React.FC = () => {
             {paginatedUsers.length > 0 ? (
               paginatedUsers.map((user, index) => (
                 <tr
-                  key={index}
+                  key={user.id}
                   className="border-b border-slate-600 hover:bg-slate-700 text-sm"
                 >
                   <td className="p-3">
@@ -150,7 +184,6 @@ const UsersTab: React.FC = () => {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center mt-4 space-x-4 text-sm">
           <button
@@ -196,11 +229,11 @@ const UsersTab: React.FC = () => {
             className="w-full bg-slate-700 text-white px-3 py-2 rounded"
           >
             <option value="">Select Role</option>
-            <option value="Operator">Operator</option>
-            <option value="Supervisor">Supervisor</option>
-            <option value="Technician">Technician</option>
-            <option value="ITSupport">ITSupport</option>
-            <option value="Maintenance">Maintenance</option>
+            {roles.map((role) => (
+              <option key={role} value={role}>
+                {role}
+              </option>
+            ))}
           </select>
         </div>
         <div className="mt-6 flex justify-end space-x-3">
@@ -215,6 +248,34 @@ const UsersTab: React.FC = () => {
             className="bg-teal-600 text-white px-6 py-2 rounded font-semibold"
           >
             Save
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteUserTarget}
+        onRequestClose={cancelDelete}
+        className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl text-center"
+        overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+      >
+        <h3 className="text-xl font-bold text-red-500 mb-4">Confirm Delete</h3>
+        <p className="mb-6 text-slate-300">
+          Are you sure you want to delete user{" "}
+          <span className="font-semibold">{deleteUserTarget?.fullName}</span>?
+        </p>
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={cancelDelete}
+            className="bg-slate-600 text-white px-4 py-2 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmDelete}
+            className="bg-red-600 text-white px-6 py-2 rounded font-semibold"
+          >
+            Delete
           </button>
         </div>
       </Modal>
