@@ -12,23 +12,36 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Header } from "../components/Layout/Header";
 import { auth, db } from "../firebase";
 import LoadingSpinner from "../LoadingSpinner";
 
-import { Header } from "../components/Layout/Header";
+// Define proper types for form data
+interface FormData {
+  email: string;
+  password: string;
+  fullName: string;
+  username: string;
+  department: string;
+  role: string;
+  group: string;
+  facilityName: string;
+}
 
+// Options from your user dataset
 const departmentOptions = [
   "Admin",
-  "Leadership",
+  "Leadership", 
   "Maintenance",
   "Operations",
   "Safety",
   "Support",
 ];
+
 const roleOptions = [
   "Facility Support",
   "Floor Supervisor",
-  "IT Support",
+  "IT Support", 
   "Operator",
   "Ops Manager",
   "Plant Head",
@@ -37,11 +50,12 @@ const roleOptions = [
   "System Admin",
   "Technician",
 ];
+
 const groupOptions = [
   "GRP_Facility_Support",
   "GRP_Floor_Supervisor",
   "GRP_IT_Support",
-  "GRP_Operator",
+  "GRP_Operator", 
   "GRP_Ops_Manager",
   "GRP_Plant_Head",
   "GRP_Safety_Officer",
@@ -50,7 +64,9 @@ const groupOptions = [
   "GRP_Technician",
 ];
 
-const initialForm = {
+const facilityOptions = ["Atlanta", "Novi"];
+
+const initialForm: FormData = {
   email: "",
   password: "",
   fullName: "",
@@ -58,6 +74,8 @@ const initialForm = {
   department: "",
   role: "",
   group: "",
+  // facilityName: "Atlanta",
+  facilityName: "",
 };
 
 const Login: React.FC = () => {
@@ -66,7 +84,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState<FormData>(initialForm);
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
@@ -74,8 +92,9 @@ const Login: React.FC = () => {
       setAuthChecked(true);
       if (user && !isSignUp) navigate("/dashboard", { replace: true });
     });
+    
     if (location.state?.message) {
-      setSuccessMessage(location.state.message);
+      setSuccessMessage(location.state.message as string);
       window.history.replaceState({}, document.title);
     }
     return unsubscribe;
@@ -83,27 +102,48 @@ const Login: React.FC = () => {
 
   const handleUserDocument = async (
     user: User,
-    extraFields?: typeof initialForm
-  ) => {
+    extraFields?: FormData
+  ): Promise<void> => {
     const userDocRef = doc(db, "users", user.uid);
     const userSnap = await getDoc(userDocRef);
+    // if (!userSnap.exists()) {
+    //   // Determine facility based on email domain or user selection
+    //   const facilityName = extraFields?.facilityName || 
+    //                       (extraFields?.email?.includes('novi') ? 'Novi' : 'Atlanta');
     if (!userSnap.exists()) {
+    // Determine facility - require explicit selection for signup
+    let facilityName = extraFields?.facilityName;
+    
+    // Only use email-based logic for Google sign-in (when no extraFields)
+    if (!facilityName && !extraFields) {
+      facilityName = user.email?.includes('novi') ? 'Novi' : 'Atlanta';
+    }
+    
+    // For regular signup, facilityName should be explicitly selected
+    if (!facilityName) {
+      throw new Error('Facility selection is required');
+    } 
+    
       await setDoc(userDocRef, {
+        id: user.uid,
         uid: user.uid,
         email: user.email,
         displayName: user.displayName || extraFields?.fullName || "",
         fullName: extraFields?.fullName || "",
-        username: extraFields?.username || "",
+        username: extraFields?.username || user.email?.split('@')[0] || "",
         department: extraFields?.department || "",
-        role: extraFields?.role || "Viewer",
+        role: extraFields?.role || "Operator",
         group: extraFields?.group || "",
+        facilityName: facilityName,
         photoURL: user.photoURL || "",
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
       });
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setIsLoading(true);
     try {
@@ -125,7 +165,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSignUp = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setIsLoading(true);
     try {
@@ -152,16 +192,14 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSuccess = async (credentialResponse: CredentialResponse) => {
+  const handleSuccess = async (credentialResponse: CredentialResponse): Promise<void> => {
     if (!credentialResponse.credential) {
       alert("No credential received");
       return;
     }
     setIsLoading(true);
     try {
-      const credential = GoogleAuthProvider.credential(
-        credentialResponse.credential
-      );
+      const credential = GoogleAuthProvider.credential(credentialResponse.credential);
       const userCredential = await signInWithCredential(auth, credential);
       await handleUserDocument(userCredential.user);
 
@@ -176,7 +214,7 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleError = () => {
+  const handleError = (): void => {
     alert("Failed to authenticate with Google. Please try again.");
   };
 
@@ -184,7 +222,6 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-      {/* Consistent Header */}
       <Header isAuthPage />
 
       <main className="flex-1 flex items-center justify-center">
@@ -252,6 +289,21 @@ const Login: React.FC = () => {
                       setForm((f) => ({ ...f, username: e.target.value }))
                     }
                   />
+                  <select
+                    required
+                    className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white"
+                    value={form.facilityName}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, facilityName: e.target.value }))
+                    }
+                  >
+                    <option value="">Select Facility</option>
+                    {facilityOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                   <select
                     required
                     className="w-full px-4 py-2 border border-gray-700 bg-gray-800 rounded-lg text-white"
