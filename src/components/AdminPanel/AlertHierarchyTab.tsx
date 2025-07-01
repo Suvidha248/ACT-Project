@@ -1,10 +1,9 @@
 <<<<<<< HEAD
 import { getAuth } from "firebase/auth";
 import React, { useEffect, useState } from "react";
-import { FaPen, FaTrash } from "react-icons/fa";
 import Modal from "react-modal";
 
-import { FaTrash, FaPen, FaPlus } from "react-icons/fa";
+import { FaPen, FaPlus, FaTrash } from "react-icons/fa";
 
 import { fetchUsers, User } from "../../services/userService";
 =======
