@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { getAuth } from "firebase/auth";
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
@@ -5,11 +6,23 @@ import Modal from "react-modal";
 import { FaPen, FaPlus, FaTrash } from "react-icons/fa";
 
 import { fetchUsers, User } from "../../services/userService";
+=======
+import React, { useEffect, useState } from "react";
+import Modal from "react-modal";
+import { FaTrash, FaPen, FaPlus } from "react-icons/fa";
+import { fetchUsers, User } from "../../services/userService";
+import {
+  fetchAlerts,
+  createAlert,
+  updateAlert,
+  deleteAlert,
+} from "../../services/alertService";
+>>>>>>> 70895f6 (all fix)
 
 Modal.setAppElement("#root");
 
 interface Alert {
-  id?: string;
+  id?: number;
   system: string;
   type: string;
   level: string;
@@ -22,7 +35,6 @@ interface Alert {
 const categories = ["WES", "IT-Service", "WMS"];
 const alertLevels = ["Critical", "High", "Medium", "Low"];
 const notifications = ["Email", "SMS"];
-const API_URL = "http://localhost:8080/api/alerts";
 
 const AlertHierarchyTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState("WES");
@@ -38,41 +50,52 @@ const AlertHierarchyTab: React.FC = () => {
     role: "",
     fullNames: [],
   });
+  const [deleteAlertTarget, setDeleteAlertTarget] = useState<Alert | null>(
+    null
+  );
 
   useEffect(() => {
-    const loadAlerts = async () => {
-      let token = sessionStorage.getItem("token");
-
-      if (!token) {
-        const auth = getAuth();
-        const user = auth.currentUser;
-        if (user) {
-          token = await user.getIdToken(true);
-          sessionStorage.setItem("token", token);
-        } else {
-          alert("Unauthorized: Please log in again.");
-          return;
-        }
+    const fetchData = async () => {
+      try {
+        const [alertsData, usersData] = await Promise.all([
+          fetchAlerts(),
+          fetchUsers(),
+        ]);
+        setAlerts(alertsData);
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Failed to load data", error);
       }
-
-      await fetchAlerts(token);
     };
-
-    loadAlerts();
-    fetchUsers().then(setUsers).catch(console.error);
+    fetchData();
   }, []);
 
-  const fetchAlerts = async (token: string) => {
+  const refreshAlerts = async () => {
     try {
-      const res = await fetch(API_URL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
-      if (Array.isArray(data)) setAlerts(data);
+      const updatedAlerts = await fetchAlerts();
+      setAlerts(updatedAlerts);
     } catch (err) {
-      console.error("Failed to load alerts", err);
+      console.error("Failed to refresh alerts", err);
     }
+  };
+
+  const openAddModal = () => {
+    const defaultRole = users.length > 0 ? users[0].role : "";
+    const defaultNames = users
+      .filter((u) => u.role === defaultRole)
+      .map((u) => u.fullName);
+
+    setFormData({
+      system: selectedCategory,
+      type: "",
+      level: "Critical",
+      notification: [],
+      role: defaultRole,
+      fullNames: defaultNames.length > 0 ? [defaultNames[0]] : [],
+    });
+
+    setFilteredNames(defaultNames);
+    setIsModalOpen(true);
   };
 
   const handleCategoryClick = (category: string) => {
@@ -91,7 +114,10 @@ const AlertHierarchyTab: React.FC = () => {
         .filter((u) => u.role === value)
         .map((u) => u.fullName);
       setFilteredNames(names);
-      setFormData((prev) => ({ ...prev, fullNames: [] }));
+      setFormData((prev) => ({
+        ...prev,
+        fullNames: names.length > 0 ? [names[0]] : [],
+      }));
     }
   };
 
@@ -105,49 +131,38 @@ const AlertHierarchyTab: React.FC = () => {
     }));
   };
 
-  const openAddModal = () => {
-    setFormData({
-      system: selectedCategory,
-      type: "",
-      level: "Critical",
-      notification: [],
-      role: "",
-      fullNames: [],
-    });
-    setFilteredNames([]);
-    setIsModalOpen(true);
-  };
-
   const handleEdit = (alert: Alert) => {
+    const names = users
+      .filter((u) => u.role === alert.role)
+      .map((u) => u.fullName);
+
     setFormData({
       ...alert,
       fullNames: alert.fullName ? [alert.fullName] : [],
     });
-    const names = users
-      .filter((u) => u.role === alert.role)
-      .map((u) => u.fullName);
+
     setFilteredNames(names);
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id?: string) => {
-    if (!id) return;
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      alert("Unauthorized: Please log in again.");
-      return;
-    }
+  const handleDelete = (alert: Alert) => {
+    setDeleteAlertTarget(alert);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteAlertTarget?.id) return;
     try {
-      const res = await fetch(`${API_URL}/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(await res.text());
-      await fetchAlerts(token); // 🔥 Refresh alerts after delete
+      await deleteAlert(deleteAlertTarget.id);
+      await refreshAlerts();
+      setDeleteAlertTarget(null);
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Failed to delete alert: " + (err as Error).message);
     }
+  };
+
+  const cancelDelete = () => {
+    setDeleteAlertTarget(null);
   };
 
   const handleSave = async () => {
@@ -155,34 +170,20 @@ const AlertHierarchyTab: React.FC = () => {
       alert("Please fill all required fields.");
       return;
     }
-    const token = sessionStorage.getItem("token");
-    if (!token) {
-      alert("Unauthorized: Please log in again.");
-      return;
-    }
-    const isEdit = !!formData.id;
-    const url = isEdit ? `${API_URL}/${formData.id}` : API_URL;
-    const method = isEdit ? "PUT" : "POST";
+
     const payload = {
-      system: formData.system,
-      type: formData.type,
-      level: formData.level,
-      notification: formData.notification,
-      role: formData.role,
+      ...formData,
       fullName: formData.fullNames[0],
     };
+
     try {
-      const res = await fetch(url, {
-        method,
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error("Failed to save alert.");
+      if (formData.id) {
+        await updateAlert(formData.id, payload);
+      } else {
+        await createAlert(payload);
+      }
       setIsModalOpen(false);
-      await fetchAlerts(token); // 🔥 Always refresh from DB after save
+      await refreshAlerts();
     } catch (err) {
       console.error("Save failed:", err);
       alert("Failed to save alert: " + (err as Error).message);
@@ -191,7 +192,6 @@ const AlertHierarchyTab: React.FC = () => {
 
   return (
     <div className="p-6 text-white">
-      {/* Category Buttons */}
       <div className="flex space-x-4 mb-6">
         {categories.map((cat) => (
           <button
@@ -214,7 +214,6 @@ const AlertHierarchyTab: React.FC = () => {
         </button>
       </div>
 
-      {/* Alerts Table */}
       <div className="bg-slate-800 rounded-lg overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -248,7 +247,7 @@ const AlertHierarchyTab: React.FC = () => {
                       <FaPen />
                     </button>
                     <button
-                      onClick={() => handleDelete(alert.id)}
+                      onClick={() => handleDelete(alert)}
                       className="text-red-400 hover:underline"
                     >
                       <FaTrash />
@@ -260,7 +259,7 @@ const AlertHierarchyTab: React.FC = () => {
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Edit/Add Modal */}
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
@@ -348,6 +347,34 @@ const AlertHierarchyTab: React.FC = () => {
             className="bg-teal-600 text-white px-6 py-2 rounded font-semibold"
           >
             {formData.id ? "Update" : "Save"}
+          </button>
+        </div>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={!!deleteAlertTarget}
+        onRequestClose={cancelDelete}
+        className="mx-auto my-20 w-full max-w-md bg-slate-800 p-6 rounded-xl text-center"
+        overlayClassName="fixed inset-0 bg-black/60 z-50 flex items-center justify-center"
+      >
+        <h3 className="text-xl font-bold text-red-500 mb-4">Confirm Delete</h3>
+        <p className="mb-6 text-slate-300">
+          Are you sure you want to delete alert{" "}
+          <span className="font-semibold">{deleteAlertTarget?.type}</span>?
+        </p>
+        <div className="flex justify-center space-x-4">
+          <button
+            onClick={cancelDelete}
+            className="bg-slate-600 text-white px-4 py-2 rounded"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={confirmDelete}
+            className="bg-red-600 text-white px-6 py-2 rounded font-semibold"
+          >
+            Delete
           </button>
         </div>
       </Modal>
