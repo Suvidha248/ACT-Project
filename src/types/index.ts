@@ -4,7 +4,9 @@ export type IncidentStatus =
   | "in-progress"
   | "resolved"
   | "closed";
+
 export type IncidentPriority = "low" | "medium" | "high" | "critical";
+
 export type AlertType =
   | "temperature"
   | "humidity"
@@ -19,6 +21,11 @@ export interface User {
   email: string;
   role: string;
   department: string;
+}
+
+export interface UserOption {
+  fullName: string;
+  role: string;
 }
 
 export interface Note {
@@ -37,6 +44,7 @@ export interface Incident {
   priority: IncidentPriority;
   alertType: AlertType;
   location: string;
+  facility?: string;
   assignedTo?: User;
   reportedBy: User;
   createdAt: Date;
@@ -67,9 +75,4 @@ export interface Alert {
   notification: string[];
   role?: string;
   fullName?: string;
-}
-
-export interface User {
-  fullName: string;
-  role: string;
 }

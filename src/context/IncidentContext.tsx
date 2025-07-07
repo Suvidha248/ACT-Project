@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useReducer, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  ReactNode,
+} from "react";
 import { Incident, IncidentStatus, User, Note } from "../types";
-import { mockIncidents, mockUsers } from "../data/mockData";
+import { getAllIncidents } from "../services/incidentService";
+import { getAllUsers } from "../services/userService"; // ✅ NEW
 
 interface IncidentState {
   incidents: Incident[];
@@ -10,6 +17,7 @@ interface IncidentState {
 
 type IncidentAction =
   | { type: "SET_INCIDENTS"; payload: Incident[] }
+  | { type: "SET_USERS"; payload: User[] } // ✅ NEW
   | { type: "SELECT_INCIDENT"; payload: Incident | null }
   | { type: "UPDATE_INCIDENT"; payload: Incident }
   | { type: "ADD_INCIDENT"; payload: Incident }
@@ -22,9 +30,9 @@ type IncidentAction =
   | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } };
 
 const initialState: IncidentState = {
-  incidents: mockIncidents,
+  incidents: [],
   selectedIncident: null,
-  users: mockUsers,
+  users: [], // ✅ changed from mockUsers to empty array
 };
 
 function incidentReducer(
@@ -34,6 +42,9 @@ function incidentReducer(
   switch (action.type) {
     case "SET_INCIDENTS":
       return { ...state, incidents: action.payload };
+
+    case "SET_USERS": // ✅ NEW
+      return { ...state, users: action.payload };
 
     case "SELECT_INCIDENT":
       return { ...state, selectedIncident: action.payload };
@@ -140,6 +151,23 @@ const IncidentContext = createContext<{
 
 export function IncidentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(incidentReducer, initialState);
+
+  useEffect(() => {
+    const fetchIncidentsAndUsers = async () => {
+      try {
+        const [incidentsData, usersData] = await Promise.all([
+          getAllIncidents(),
+          getAllUsers(), // ✅ fetch users dynamically
+        ]);
+        dispatch({ type: "SET_INCIDENTS", payload: incidentsData });
+        dispatch({ type: "SET_USERS", payload: usersData });
+      } catch (error) {
+        console.error("Failed to fetch incidents or users:", error);
+      }
+    };
+
+    fetchIncidentsAndUsers();
+  }, []);
 
   return (
     <IncidentContext.Provider value={{ state, dispatch }}>

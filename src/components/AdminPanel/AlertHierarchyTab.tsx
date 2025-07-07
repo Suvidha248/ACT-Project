@@ -1,23 +1,14 @@
-<<<<<<< HEAD
-import { getAuth } from "firebase/auth";
-import React, { useEffect, useState } from "react";
-import Modal from "react-modal";
-
-import { FaPen, FaPlus, FaTrash } from "react-icons/fa";
-
-import { fetchUsers, User } from "../../services/userService";
-=======
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
 import { FaTrash, FaPen, FaPlus } from "react-icons/fa";
-import { fetchUsers, User } from "../../services/userService";
+import { fetchUsers } from "../../services/userService";
+import { User } from "../../types";
 import {
   fetchAlerts,
   createAlert,
   updateAlert,
   deleteAlert,
 } from "../../services/alertService";
->>>>>>> 70895f6 (all fix)
 
 Modal.setAppElement("#root");
 
@@ -83,7 +74,7 @@ const AlertHierarchyTab: React.FC = () => {
     const defaultRole = users.length > 0 ? users[0].role : "";
     const defaultNames = users
       .filter((u) => u.role === defaultRole)
-      .map((u) => u.fullName);
+      .map((u) => u.name);
 
     setFormData({
       system: selectedCategory,
@@ -110,9 +101,7 @@ const AlertHierarchyTab: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "role") {
-      const names = users
-        .filter((u) => u.role === value)
-        .map((u) => u.fullName);
+      const names = users.filter((u) => u.role === value).map((u) => u.name);
       setFilteredNames(names);
       setFormData((prev) => ({
         ...prev,
@@ -132,9 +121,7 @@ const AlertHierarchyTab: React.FC = () => {
   };
 
   const handleEdit = (alert: Alert) => {
-    const names = users
-      .filter((u) => u.role === alert.role)
-      .map((u) => u.fullName);
+    const names = users.filter((u) => u.role === alert.role).map((u) => u.name);
 
     setFormData({
       ...alert,
