@@ -1,13 +1,13 @@
 import React, {
   createContext,
-  useContext,
-  useReducer,
-  useEffect,
   ReactNode,
+  useContext,
+  useEffect,
+  useReducer,
 } from "react";
-import { Incident, IncidentStatus, User, Note } from "../types";
-import { getAllIncidents } from "../services/incidentService";
+import { getAllIncidents } from "../services/IncidentService";
 import { getAllUsers } from "../services/userService"; // ✅ NEW
+import { Incident, IncidentStatus, Note, User } from "../types";
 
 interface IncidentState {
   incidents: Incident[];

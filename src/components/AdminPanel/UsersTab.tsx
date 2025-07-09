@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
+import { toast } from "react-toastify";
 import {
-  fetchUsers,
-  editUser,
   deleteUser,
+  editUser,
   fetchRoles,
+  fetchUsers,
 } from "../../services/userService";
-import { User } from "../../types"; // ✅ Import User from global types
+import { User } from "../../types";
 
 Modal.setAppElement("#root");
 
@@ -32,7 +33,7 @@ const UsersTab: React.FC = () => {
         setRoles(fetchedRoles);
       } catch (error) {
         console.error(error);
-        alert("Failed to load users or roles.");
+        toast.error("Failed to load users or roles.");
       }
     };
     fetchData();
@@ -63,9 +64,10 @@ const UsersTab: React.FC = () => {
           prev.map((u) => (u.id === updated.id ? updated : u))
         );
         setIsModalOpen(false);
+        toast.success("User updated successfully");
       } catch (error) {
         console.error(error);
-        alert("Failed to save user changes.");
+        toast.error("Failed to update user");
       }
     }
   };
@@ -80,9 +82,10 @@ const UsersTab: React.FC = () => {
         await deleteUser(deleteUserTarget.id);
         setUsers((prev) => prev.filter((u) => u.id !== deleteUserTarget.id));
         setDeleteUserTarget(null);
+        toast.success("User deleted successfully");
       } catch (error) {
         console.error(error);
-        alert("Failed to delete user.");
+        toast.error("Failed to delete user");
       }
     }
   };
@@ -92,7 +95,7 @@ const UsersTab: React.FC = () => {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.name
+    const matchesSearch = (user.name || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesRole = selectedRole ? user.role === selectedRole : true;
@@ -115,7 +118,6 @@ const UsersTab: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-
         <select
           className="p-2 bg-slate-700 text-white rounded"
           value={selectedRole}

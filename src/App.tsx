@@ -1,19 +1,20 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import { IncidentProvider } from "./context/IncidentContext";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { ToastContainer } from "react-toastify"; // ✅ import this
+import "react-toastify/dist/ReactToastify.css";
 import { Layout } from "./components/Layout/Layout";
 import Login from "./components/Login";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
+import { IncidentProvider } from "./context/IncidentContext";
 import PrivateRoute from "./routes/PrivateRoute";
 
-import { DashboardPage } from "./pages/DashboardPage";
-import { IncidentsPage } from "./pages/IncidentsPage";
-import { IncidentDetailPage } from "./pages/IncidentDetailPage";
-import { IncidentTrackerPage } from "./pages/IncidentTrackerPage";
-import UsersPage from "./pages/UsersPage";
-import UploadUsers from "./pages/UploadUsers";
 import AdminPanel from "./components/AdminPanel/AdminPanel";
+import { DashboardPage } from "./pages/DashboardPage";
+import { IncidentDetailPage } from "./pages/IncidentDetailPage";
+import { IncidentsPage } from "./pages/IncidentsPage";
+import { IncidentTrackerPage } from "./pages/IncidentTrackerPage";
+import UploadUsers from "./pages/UploadUsers";
+import UsersPage from "./pages/UsersPage";
 
 const Unauthorized = () => (
   <div className="p-6">
@@ -27,6 +28,9 @@ function App() {
     <AuthProvider>
       <IncidentProvider>
         <Router>
+          {/* ✅ Add ToastContainer here */}
+          <ToastContainer position="top-right" autoClose={3000} />
+
           <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />

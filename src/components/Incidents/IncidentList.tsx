@@ -1,11 +1,11 @@
 // src/components/Incidents/IncidentList.tsx
-import React, { useState } from "react";
+import { Filter, Plus, Search } from "lucide-react";
+import { useState } from "react";
 import { useIncidents } from "../../context/IncidentContext";
-import { IncidentCard } from "./IncidentCard";
-import { IncidentForm } from "./IncidentForm";
 import { Badge } from "../Shared/Badge";
 import { Button } from "../Shared/Button";
-import { Search, Filter, Plus } from "lucide-react";
+import { IncidentCard } from "./IncidentCard";
+import { IncidentForm } from "./IncidentForm";
 
 export function IncidentList() {
   const { state } = useIncidents();
