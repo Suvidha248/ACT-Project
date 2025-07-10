@@ -21,6 +21,7 @@ export interface User {
   email: string;
   role: string;
   department: string;
+  facility?: string;
 }
 
 export interface UserOption {
@@ -31,9 +32,14 @@ export interface UserOption {
 export interface Note {
   id: string;
   content: string;
-  author: User;
+  author: {
+    id: string;
+    name: string;
+    email: string;
+  };
   createdAt: Date;
-  isInternal: boolean;
+  type?: 'system' | 'user' | 'escalation';
+  isInternal: boolean; // ✅ This property is required
 }
 
 export interface Incident {

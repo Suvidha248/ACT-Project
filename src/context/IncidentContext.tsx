@@ -13,27 +13,45 @@ interface IncidentState {
   incidents: Incident[];
   selectedIncident: Incident | null;
   users: User[];
+  loading: boolean;
+  error: string | null;
 }
+
 
 type IncidentAction =
   | { type: "SET_INCIDENTS"; payload: Incident[] }
-  | { type: "SET_USERS"; payload: User[] } // ✅ NEW
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_USERS"; payload: User[] }
   | { type: "SELECT_INCIDENT"; payload: Incident | null }
   | { type: "UPDATE_INCIDENT"; payload: Incident }
   | { type: "ADD_INCIDENT"; payload: Incident }
   | { type: "ADD_NOTE"; payload: { incidentId: string; note: Note } }
   | { type: "ASSIGN_INCIDENT"; payload: { incidentId: string; user: User } }
-  | {
-      type: "UPDATE_STATUS";
-      payload: { incidentId: string; status: IncidentStatus };
-    }
+  | { type: "UPDATE_STATUS"; payload: { incidentId: string; status: IncidentStatus } }
   | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } };
+
 
 const initialState: IncidentState = {
   incidents: [],
   selectedIncident: null,
-  users: [], // ✅ changed from mockUsers to empty array
+  users: [],
+  loading: false,
+  error: null,
 };
+
+// export interface Note {
+//   id: string;
+//   content: string;
+//   author: {
+//     id: string;
+//     name: string;
+//     email: string;
+//   };
+//   createdAt: Date;
+//   type?: 'system' | 'user' | 'escalation';
+// }
+
 
 function incidentReducer(
   state: IncidentState,
@@ -41,9 +59,29 @@ function incidentReducer(
 ): IncidentState {
   switch (action.type) {
     case "SET_INCIDENTS":
-      return { ...state, incidents: action.payload };
+      console.log("🔄 Reducer: Setting incidents", action.payload);
+      return { 
+        ...state, 
+        incidents: Array.isArray(action.payload) ? action.payload : [],
+        loading: false,
+        error: null
+      };
 
-    case "SET_USERS": // ✅ NEW
+    case "SET_LOADING":
+      return {
+        ...state,
+        loading: action.payload,
+        error: action.payload ? null : state.error // Clear error when starting to load
+      };
+
+    case "SET_ERROR":
+      return {
+        ...state,
+        error: action.payload,
+        loading: false
+      };
+
+    case "SET_USERS":
       return { ...state, users: action.payload };
 
     case "SELECT_INCIDENT":
@@ -73,13 +111,14 @@ function incidentReducer(
         incidents: state.incidents.map((i) =>
           i.id === action.payload.incidentId
             ? {
-                ...i,
-                notes: [...i.notes, action.payload.note],
-                updatedAt: new Date(),
-              }
+              ...i,
+              notes: [...i.notes, action.payload.note], // Now properly typed
+              updatedAt: new Date(),
+            }
             : i
         ),
       };
+
 
     case "ASSIGN_INCIDENT":
       return {
@@ -143,6 +182,7 @@ function incidentReducer(
       return state;
   }
 }
+
 
 const IncidentContext = createContext<{
   state: IncidentState;
