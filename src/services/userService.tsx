@@ -88,20 +88,23 @@ export const fetchRoles = async (): Promise<string[]> => {
 export const editUser = async (updatedUser: User): Promise<User> => {
   const token = sessionStorage.getItem("idToken") || "";
 
+  const payload = {
+    fullName: updatedUser.name,
+    role: updatedUser.role,
+  };
+
   const response = await fetch(`${API_URL}/${updatedUser.id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(updatedUser),
+    body: JSON.stringify(payload),
   });
 
-  // 🔴 Handle 401 Unauthorized
   if (response.status === 401) {
-    console.error("Unauthorized. Redirecting to login.");
     window.location.href = "/login";
-    throw new Error("Unauthorized. Please log in again.");
+    throw new Error("Unauthorized");
   }
 
   if (!response.ok) {
@@ -110,15 +113,13 @@ export const editUser = async (updatedUser: User): Promise<User> => {
 
   const apiUser: APIUser = await response.json();
 
-  const user: User = {
+  return {
     id: apiUser.id.toString(),
     name: apiUser.fullName,
     email: "placeholder@example.com",
     role: apiUser.role,
     department: "General",
   };
-
-  return user;
 };
 
 /**
