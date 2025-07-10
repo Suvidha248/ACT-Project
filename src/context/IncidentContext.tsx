@@ -1,7 +1,14 @@
 import React, { createContext, ReactNode, useContext, useEffect, useReducer } from "react";
-import { getFilteredIncidents } from "../services/IncidentService";
+import {
+  addNoteToIncident as addNoteToIncidentAPI,
+  assignIncident as assignIncidentAPI,
+  createIncident as createIncidentAPI,
+  escalateIncident as escalateIncidentAPI,
+  getFilteredIncidents,
+  updateIncidentStatus as updateIncidentStatusAPI,
+} from "../services/IncidentService";
 import { getAllUsers } from "../services/userService";
-import { Incident, Note, User } from "../types";
+import { Incident, IncidentStatus, Note, User } from "../types";
 
 interface IncidentState {
   incidents: Incident[];
@@ -72,7 +79,12 @@ function incidentReducer(state: IncidentState, action: IncidentAction): Incident
 const IncidentContext = createContext<{
   state: IncidentState;
   dispatch: React.Dispatch<IncidentAction>;
-}>({ state: initialState, dispatch: () => null });
+  createIncident: (data: Partial<Incident>) => Promise<void>;
+  updateStatus: (id: string, status: IncidentStatus) => Promise<void>;
+  assignIncident: (id: string, userId: string) => Promise<void>;
+  addNote: (incidentId: string, note: Note) => Promise<void>;
+  escalateIncident: (incidentId: string) => Promise<void>;
+} | null>(null);
 
 export function IncidentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(incidentReducer, initialState);
@@ -81,18 +93,87 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
     const fetchData = async () => {
       dispatch({ type: "SET_LOADING", payload: true });
       try {
-        const [incidentsRes, usersRes] = await Promise.all([getFilteredIncidents(), getAllUsers()]);
-        dispatch({ type: "SET_INCIDENTS", payload: incidentsRes.data });
+        const [incidentRes, usersRes] = await Promise.all([getFilteredIncidents(), getAllUsers()]);
+        dispatch({ type: "SET_INCIDENTS", payload: incidentRes.data });
         dispatch({ type: "SET_USERS", payload: usersRes });
-      } catch (error) {
-        dispatch({ type: "SET_ERROR", payload: "Failed to load incidents or users" });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load data.";
+        dispatch({ type: "SET_ERROR", payload: errorMessage });
       }
     };
     fetchData();
   }, []);
 
+  const createIncident = async (data: Partial<Incident>) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const newIncident = await createIncidentAPI(data as Incident);
+      dispatch({ type: "ADD_INCIDENT", payload: newIncident });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: "SET_ERROR", payload: "Failed to create incident." });
+    }
+  };
+
+  const updateStatus = async (id: string, status: IncidentStatus) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      await updateIncidentStatusAPI(id, status);
+      const updatedIncidents = await getFilteredIncidents();
+      dispatch({ type: "SET_INCIDENTS", payload: updatedIncidents.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: "SET_ERROR", payload: "Failed to update status." });
+    }
+  };
+
+  const assignIncident = async (id: string, userId: string) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      await assignIncidentAPI(id, userId);
+      const updatedIncidents = await getFilteredIncidents();
+      dispatch({ type: "SET_INCIDENTS", payload: updatedIncidents.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: "SET_ERROR", payload: "Failed to assign incident." });
+    }
+  };
+
+  const addNote = async (incidentId: string, note: Note) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      const savedNote = await addNoteToIncidentAPI(incidentId, note); // ✅ returns Note
+      dispatch({ type: "ADD_NOTE", payload: { incidentId, note: savedNote } });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: "SET_ERROR", payload: "Failed to add note." });
+    }
+  };
+
+  const escalateIncident = async (incidentId: string) => {
+    dispatch({ type: "SET_LOADING", payload: true });
+    try {
+      await escalateIncidentAPI(incidentId);
+      const updatedIncidents = await getFilteredIncidents();
+      dispatch({ type: "SET_INCIDENTS", payload: updatedIncidents.data });
+    } catch (err) {
+      console.log(err);
+      dispatch({ type: "SET_ERROR", payload: "Failed to escalate incident." });
+    }
+  };
+
   return (
-    <IncidentContext.Provider value={{ state, dispatch }}>
+    <IncidentContext.Provider
+      value={{
+        state,
+        dispatch,
+        createIncident,
+        updateStatus,
+        assignIncident,
+        addNote,
+        escalateIncident,
+      }}
+    >
       {children}
     </IncidentContext.Provider>
   );

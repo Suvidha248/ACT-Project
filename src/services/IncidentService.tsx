@@ -1,20 +1,7 @@
-// src/services/IncidentService.tsx
 import axios from "axios";
-import {
-  AlertType,
-  Incident,
-  IncidentPriority,
-  IncidentStatus,
-  Note,
-  User
-} from "../types";
+import { AlertType, Incident, IncidentPriority, IncidentStatus, Note } from "../types";
 
 const API_BASE_URL = "http://localhost:8080/api";
-
-type IncidentApiResponse = {
-  total: number;
-  data: APIIncident[];
-};
 
 type APIIncident = {
   id: string;
@@ -27,9 +14,36 @@ type APIIncident = {
   slaDeadline?: string;
   alertType?: string;
   facility?: string;
+  assignedTo?: {
+    id: string;
+    name: string;
+    email?: string;
+    role: string;
+    department: string;
+  };
+  reportedBy?: {
+    id: string;
+    name: string;
+    email?: string;
+    role: string;
+  };
 };
 
-// Enhanced filtering interface
+const getAuthHeader = () => ({
+  Authorization: `Bearer ${sessionStorage.getItem("idToken") || ""}`,
+});
+
+// 🔷 Form Data type for create incident
+export type IncidentFormData = {
+  title: string;
+  description: string;
+  location: string;
+  priority: IncidentPriority;
+  alertType: AlertType;
+  additionalDetails?: string;
+};
+
+// 🔷 Filters and response types
 export interface IncidentFilters {
   facility?: string;
   status?: string;
@@ -43,239 +57,123 @@ export interface FilteredIncidentResponse {
   total: number;
 }
 
-// Transform API incident to frontend Incident type
-// In IncidentService.tsx
-const transformAPIIncident = (apiIncident: APIIncident): Incident => ({
-  id: apiIncident.id,
-  title: apiIncident.title,
-  status: apiIncident.status as IncidentStatus,
-  priority: apiIncident.priority as IncidentPriority,
-  location: apiIncident.facility || "",
-  alertType: (apiIncident.alertType as AlertType) || "equipment",
-  reportedBy: {
-    id: "system",
-    name: "System",
-    role: "admin",
-    email: "system@example.com",
-  } as User,
-  createdAt: new Date(apiIncident.createdAt),
-  updatedAt: apiIncident.updatedAt
-    ? new Date(apiIncident.updatedAt)
-    : new Date(apiIncident.createdAt),
-  description: apiIncident.description || "No description provided",
-  slaDeadline: apiIncident.slaDeadline
-    ? new Date(apiIncident.slaDeadline)
-    : new Date(),
-  notes: [], // ✅ Empty array of properly typed Notes
+// 🔷 Transform API response to Incident
+const transformAPIIncident = (api: APIIncident): Incident => ({
+  id: api.id,
+  title: api.title,
+  status: api.status as IncidentStatus,
+  priority: api.priority.toLowerCase() as IncidentPriority,
+  location: api.facility || "",
+  alertType: (api.alertType?.toLowerCase() as AlertType) || "equipment",
+  assignedTo: api.assignedTo
+    ? {
+        id: api.assignedTo.id,
+        name: api.assignedTo.name,
+        email: api.assignedTo.email || "no-email@example.com",
+        role: api.assignedTo.role,
+        department: api.assignedTo.department,
+      }
+    : undefined,
+  reportedBy: api.reportedBy
+    ? {
+        id: api.reportedBy.id,
+        name: api.reportedBy.name,
+        email: api.reportedBy.email || "system@example.com",
+        role: api.reportedBy.role,
+        department: "General",
+      }
+    : {
+        id: "system",
+        name: "System",
+        email: "system@example.com",
+        role: "admin",
+        department: "General",
+      },
+  createdAt: new Date(api.createdAt),
+  updatedAt: api.updatedAt ? new Date(api.updatedAt) : new Date(api.createdAt),
+  description: api.description || "No description provided",
+  slaDeadline: api.slaDeadline ? new Date(api.slaDeadline) : new Date(),
+  notes: [],
   escalationLevel: 0,
   acknowledgedAt: undefined,
   resolvedAt: undefined,
   closedAt: undefined,
-  assignedTo: undefined,
 });
 
-
-// Get all incidents (existing function)
-export const getAllIncidents = async (): Promise<Incident[]> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const response = await axios.get<IncidentApiResponse>(
-    `${API_BASE_URL}/incidents`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  const apiIncidents = response.data.data;
-  return apiIncidents.map(transformAPIIncident);
-};
-
-// NEW: Get filtered incidents with server-side filtering and pagination
+// 🔷 Get filtered incidents
 export const getFilteredIncidents = async (filters: IncidentFilters = {}): Promise<FilteredIncidentResponse> => {
-  const token = sessionStorage.getItem("idToken") || "";
-  
   const params = new URLSearchParams();
-  
-  // Add filters to query params
-  if (filters.facility && filters.facility !== 'all') {
-    params.append("facility", filters.facility);
-  }
-  if (filters.status && filters.status !== 'all') {
-    params.append("status", filters.status);
-  }
-  if (filters.priority && filters.priority !== 'all') {
-    params.append("priority", filters.priority);
-  }
-  if (filters.page !== undefined) {
-    params.append("page", filters.page.toString());
-  }
-  if (filters.size !== undefined) {
-    params.append("size", filters.size.toString());
-  }
+  if (filters.facility && filters.facility !== "all") params.append("facility", filters.facility);
+  if (filters.status && filters.status !== "all") params.append("status", filters.status);
+  if (filters.priority && filters.priority !== "all") params.append("priority", filters.priority);
+  if (filters.page !== undefined) params.append("page", filters.page.toString());
+  if (filters.size !== undefined) params.append("size", filters.size.toString());
 
-  console.log("🔗 Fetching filtered incidents:", `${API_BASE_URL}/incidents?${params.toString()}`);
-
-  const response = await axios.get<IncidentApiResponse>(
+  const response = await axios.get<{ data: APIIncident[]; total: number }>(
     `${API_BASE_URL}/incidents?${params.toString()}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
+    { headers: getAuthHeader() }
   );
-
-  console.log("📦 API Response:", response.data);
-
-  const apiIncidents = response.data.data;
-  const transformedIncidents = apiIncidents.map(transformAPIIncident);
 
   return {
-    data: transformedIncidents,
-    total: response.data.total || transformedIncidents.length
+    data: response.data.data.map(transformAPIIncident),
+    total: response.data.total || response.data.data.length,
   };
 };
 
-// Get single incident by ID
+// 🔷 Get incident by ID
 export const getIncidentById = async (id: string): Promise<Incident> => {
-  const token = sessionStorage.getItem("idToken") || "";
+  const response = await axios.get<APIIncident>(`${API_BASE_URL}/incidents/${id}`, {
+    headers: getAuthHeader(),
+  });
+  return transformAPIIncident(response.data);
+};
 
-  const response = await axios.get<APIIncident>(
-    `${API_BASE_URL}/incidents/${id}`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+// 🔷 Create incident
+export const createIncident = async (incidentData: IncidentFormData): Promise<Incident> => {
+  const payload = {
+    title: incidentData.title,
+    description: incidentData.description,
+    facility: incidentData.location,
+    location: incidentData.location,
+    priority: incidentData.priority.toUpperCase(),
+    alertType: incidentData.alertType.toUpperCase(),
+    additionalContext: incidentData.additionalDetails || "",
+  };
+
+  const response = await axios.post<APIIncident>(`${API_BASE_URL}/incidents`, payload, {
+    headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+  });
 
   return transformAPIIncident(response.data);
 };
 
-// Create new incident
-export const createIncident = async (
-  incidentData: Partial<Incident>
-): Promise<Incident> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const response = await axios.post<APIIncident>(
-    `${API_BASE_URL}/incidents`,
-    {
-      title: incidentData.title,
-      description: incidentData.description,
-      priority: incidentData.priority,
-      facility: incidentData.location,
-      alertType: incidentData.alertType
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return transformAPIIncident(response.data);
+// 🔷 Update incident status
+export const updateIncidentStatus = async (id: string, status: IncidentStatus): Promise<void> => {
+  await axios.put(`${API_BASE_URL}/incidents/${id}/status`, { status }, { headers: getAuthHeader() });
 };
 
-// Update incident status
-export const updateIncidentStatus = async (
-  id: string,
-  status: string
-): Promise<void> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  await axios.put(
-    `${API_BASE_URL}/incidents/${id}/status`,
-    { status },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+// 🔷 Assign incident
+export const assignIncident = async (id: string, userId: string): Promise<void> => {
+  await axios.put(`${API_BASE_URL}/incidents/${id}/assign`, { userId }, { headers: getAuthHeader() });
 };
 
-// Assign incident to user
-export const assignIncident = async (
-  id: string,
-  userId: string
-): Promise<void> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  await axios.put(
-    `${API_BASE_URL}/incidents/${id}/assign`,
-    { userId },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
+// 🔷 Escalate incident
+export const escalateIncident = async (id: string): Promise<void> => {
+  await axios.put(`${API_BASE_URL}/incidents/${id}/escalate`, {}, { headers: getAuthHeader() });
 };
 
-// Get available facilities
+// 🔷 Add note to incident
+export const addNoteToIncident = async (incidentId: string, note: Note): Promise<Note> => {
+  const response = await axios.post<Note>(`${API_BASE_URL}/incidents/${incidentId}/notes`, note, {
+    headers: getAuthHeader(),
+  });
+  return response.data; // ✅ ensure Note is returned
+};
+
+// 🔷 Get facilities
 export const getFacilities = async (): Promise<string[]> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const response = await axios.get<string[]>(
-    `${API_BASE_URL}/incidents/facilities`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
-  return response.data;
-};
-
-
-// Add note to incident
-export const addNoteToIncident = async (
-  incidentId: string,
-  noteContent: string
-): Promise<void> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  await axios.post(
-    `${API_BASE_URL}/incidents/${incidentId}/notes`,
-    { content: noteContent },
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-};
-
-// Escalate incident
-export const escalateIncident = async (incidentId: string): Promise<void> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  await axios.put(
-    `${API_BASE_URL}/incidents/${incidentId}/escalate`,
-    {},
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-};
-
-// Optional: Get incident notes
-export const getIncidentNotes = async (incidentId: string): Promise<Note[]> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const response = await axios.get<Note[]>(
-    `${API_BASE_URL}/incidents/${incidentId}/notes`,
-    {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    }
-  );
-
+  const response = await axios.get<string[]>(`${API_BASE_URL}/incidents/facilities`, {
+    headers: getAuthHeader(),
+  });
   return response.data;
 };
