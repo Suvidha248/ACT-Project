@@ -5,7 +5,8 @@ import {
   Incident,
   IncidentPriority,
   IncidentStatus,
-  User,
+  Note,
+  User
 } from "../types";
 
 const API_BASE_URL = "http://localhost:8080/api";
@@ -219,6 +220,56 @@ export const getFacilities = async (): Promise<string[]> => {
 
   const response = await axios.get<string[]>(
     `${API_BASE_URL}/incidents/facilities`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  return response.data;
+};
+
+
+// Add note to incident
+export const addNoteToIncident = async (
+  incidentId: string,
+  noteContent: string
+): Promise<void> => {
+  const token = sessionStorage.getItem("idToken") || "";
+
+  await axios.post(
+    `${API_BASE_URL}/incidents/${incidentId}/notes`,
+    { content: noteContent },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};
+
+// Escalate incident
+export const escalateIncident = async (incidentId: string): Promise<void> => {
+  const token = sessionStorage.getItem("idToken") || "";
+
+  await axios.put(
+    `${API_BASE_URL}/incidents/${incidentId}/escalate`,
+    {},
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+};
+
+// Optional: Get incident notes
+export const getIncidentNotes = async (incidentId: string): Promise<Note[]> => {
+  const token = sessionStorage.getItem("idToken") || "";
+
+  const response = await axios.get<Note[]>(
+    `${API_BASE_URL}/incidents/${incidentId}/notes`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
