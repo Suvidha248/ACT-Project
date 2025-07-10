@@ -1,11 +1,16 @@
-export interface User {
-  id: number;
-  fullName: string;
-  role: string;
-}
+import { User } from "../types";
 
 const API_URL = "http://localhost:8080/api/admin/users";
 
+type APIUser = {
+  id: number;
+  fullName: string;
+  role: string;
+};
+
+/**
+ * Fetch all users from the backend.
+ */
 export const fetchUsers = async (): Promise<User[]> => {
   const token = sessionStorage.getItem("idToken") || "";
 
@@ -17,14 +22,41 @@ export const fetchUsers = async (): Promise<User[]> => {
     },
   });
 
+  // 🔴 Handle 401 Unauthorized
+  if (response.status === 401) {
+    console.error("Unauthorized. Redirecting to login.");
+    window.location.href = "/login"; // Update this route if your login page is different
+    throw new Error("Unauthorized. Please log in again.");
+  }
+
   if (!response.ok) {
     throw new Error("Failed to fetch users");
   }
 
-  const users: User[] = await response.json();
+  const apiUsers: APIUser[] = await response.json();
+
+  const users: User[] = apiUsers.map((apiUser) => ({
+    id: apiUser.id.toString(),
+    name: apiUser.fullName,
+    email: "placeholder@example.com",
+    role: apiUser.role,
+    department: "General",
+  }));
+
   return users;
 };
 
+/**
+ * Get all users (alias for fetchUsers).
+ * This is needed for IncidentContext.tsx compatibility.
+ */
+export const getAllUsers = async (): Promise<User[]> => {
+  return fetchUsers();
+};
+
+/**
+ * Fetch available user roles.
+ */
 export const fetchRoles = async (): Promise<string[]> => {
   const token = sessionStorage.getItem("idToken") || "";
 
@@ -35,6 +67,13 @@ export const fetchRoles = async (): Promise<string[]> => {
     },
   });
 
+  // 🔴 Handle 401 Unauthorized
+  if (response.status === 401) {
+    console.error("Unauthorized. Redirecting to login.");
+    window.location.href = "/login";
+    throw new Error("Unauthorized. Please log in again.");
+  }
+
   if (!response.ok) {
     throw new Error("Failed to fetch roles");
   }
@@ -43,8 +82,16 @@ export const fetchRoles = async (): Promise<string[]> => {
   return roles;
 };
 
+/**
+ * Edit/update user information.
+ */
 export const editUser = async (updatedUser: User): Promise<User> => {
   const token = sessionStorage.getItem("idToken") || "";
+
+  const payload = {
+    fullName: updatedUser.name,
+    role: updatedUser.role,
+  };
 
   const response = await fetch(`${API_URL}/${updatedUser.id}`, {
     method: "PUT",
@@ -52,18 +99,33 @@ export const editUser = async (updatedUser: User): Promise<User> => {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(updatedUser),
+    body: JSON.stringify(payload),
   });
+
+  if (response.status === 401) {
+    window.location.href = "/login";
+    throw new Error("Unauthorized");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to update user");
   }
 
-  const user: User = await response.json();
-  return user;
+  const apiUser: APIUser = await response.json();
+
+  return {
+    id: apiUser.id.toString(),
+    name: apiUser.fullName,
+    email: "placeholder@example.com",
+    role: apiUser.role,
+    department: "General",
+  };
 };
 
-export const deleteUser = async (id: number): Promise<void> => {
+/**
+ * Delete a user by ID.
+ */
+export const deleteUser = async (id: string): Promise<void> => {
   const token = sessionStorage.getItem("idToken") || "";
 
   const response = await fetch(`${API_URL}/${id}`, {
@@ -72,6 +134,13 @@ export const deleteUser = async (id: number): Promise<void> => {
       Authorization: `Bearer ${token}`,
     },
   });
+
+  // 🔴 Handle 401 Unauthorized
+  if (response.status === 401) {
+    console.error("Unauthorized. Redirecting to login.");
+    window.location.href = "/login";
+    throw new Error("Unauthorized. Please log in again.");
+  }
 
   if (!response.ok) {
     throw new Error("Failed to delete user");

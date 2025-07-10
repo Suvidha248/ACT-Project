@@ -1,6 +1,13 @@
-import React, { createContext, useContext, useReducer, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useReducer,
+  useEffect,
+  ReactNode,
+} from "react";
 import { Incident, IncidentStatus, User, Note } from "../types";
-import { mockIncidents, mockUsers } from "../data/mockData";
+import * as IncidentAPI from "../services/incidentService";
+import { getAllUsers } from "../services/userService";
 
 interface IncidentState {
   incidents: Incident[];
@@ -10,21 +17,21 @@ interface IncidentState {
 
 type IncidentAction =
   | { type: "SET_INCIDENTS"; payload: Incident[] }
+  | { type: "SET_USERS"; payload: User[] }
   | { type: "SELECT_INCIDENT"; payload: Incident | null }
   | { type: "UPDATE_INCIDENT"; payload: Incident }
   | { type: "ADD_INCIDENT"; payload: Incident }
   | { type: "ADD_NOTE"; payload: { incidentId: string; note: Note } }
-  | { type: "ASSIGN_INCIDENT"; payload: { incidentId: string; user: User } }
+  | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } }
   | {
       type: "UPDATE_STATUS";
       payload: { incidentId: string; status: IncidentStatus };
-    }
-  | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } };
+    };
 
 const initialState: IncidentState = {
-  incidents: mockIncidents,
+  incidents: [],
   selectedIncident: null,
-  users: mockUsers,
+  users: [],
 };
 
 function incidentReducer(
@@ -34,28 +41,19 @@ function incidentReducer(
   switch (action.type) {
     case "SET_INCIDENTS":
       return { ...state, incidents: action.payload };
-
+    case "SET_USERS":
+      return { ...state, users: action.payload };
     case "SELECT_INCIDENT":
       return { ...state, selectedIncident: action.payload };
-
     case "UPDATE_INCIDENT":
       return {
         ...state,
         incidents: state.incidents.map((i) =>
           i.id === action.payload.id ? action.payload : i
         ),
-        selectedIncident:
-          state.selectedIncident?.id === action.payload.id
-            ? action.payload
-            : state.selectedIncident,
       };
-
     case "ADD_INCIDENT":
-      return {
-        ...state,
-        incidents: [action.payload, ...state.incidents],
-      };
-
+      return { ...state, incidents: [action.payload, ...state.incidents] };
     case "ADD_NOTE":
       return {
         ...state,
@@ -69,45 +67,15 @@ function incidentReducer(
             : i
         ),
       };
-
-    case "ASSIGN_INCIDENT":
+    case "UPDATE_STATUS":
       return {
         ...state,
         incidents: state.incidents.map((i) =>
           i.id === action.payload.incidentId
-            ? {
-                ...i,
-                assignedTo: action.payload.user,
-                updatedAt: new Date(),
-              }
+            ? { ...i, status: action.payload.status, updatedAt: new Date() }
             : i
         ),
       };
-
-    case "UPDATE_STATUS": {
-      const now = new Date();
-      return {
-        ...state,
-        incidents: state.incidents.map((i) => {
-          if (i.id !== action.payload.incidentId) return i;
-
-          const updates: Partial<Incident> = {
-            status: action.payload.status,
-            updatedAt: now,
-          };
-
-          if (action.payload.status === "acknowledged" && !i.acknowledgedAt)
-            updates.acknowledgedAt = now;
-          else if (action.payload.status === "resolved" && !i.resolvedAt)
-            updates.resolvedAt = now;
-          else if (action.payload.status === "closed" && !i.closedAt)
-            updates.closedAt = now;
-
-          return { ...i, ...updates };
-        }),
-      };
-    }
-
     case "ESCALATE_INCIDENT":
       return {
         ...state,
@@ -115,19 +83,12 @@ function incidentReducer(
           i.id === action.payload.incidentId
             ? {
                 ...i,
-                escalationLevel: i.escalationLevel + 1,
-                priority:
-                  i.priority === "low"
-                    ? "medium"
-                    : i.priority === "medium"
-                    ? "high"
-                    : "critical",
+                escalationLevel: (i.escalationLevel || 0) + 1,
                 updatedAt: new Date(),
               }
             : i
         ),
       };
-
     default:
       return state;
   }
@@ -136,13 +97,72 @@ function incidentReducer(
 const IncidentContext = createContext<{
   state: IncidentState;
   dispatch: React.Dispatch<IncidentAction>;
+  createIncident: (data: Partial<Incident>) => Promise<void>;
+  updateStatus: (id: string, status: IncidentStatus) => Promise<void>;
+  assignIncident: (id: string, userId: string) => Promise<void>;
+  addNote: (incidentId: string, note: Note) => Promise<void>;
+  escalateIncident: (incidentId: string) => Promise<void>;
 } | null>(null);
 
 export function IncidentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(incidentReducer, initialState);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [incidents, users] = await Promise.all([
+          IncidentAPI.getAllIncidents(),
+          getAllUsers(),
+        ]);
+        dispatch({ type: "SET_INCIDENTS", payload: incidents });
+        dispatch({ type: "SET_USERS", payload: users });
+      } catch (error) {
+        console.error("Error loading incidents or users", error);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const createIncident = async (data: Partial<Incident>) => {
+    const incident = await IncidentAPI.createIncident(data);
+    dispatch({ type: "ADD_INCIDENT", payload: incident });
+  };
+
+  const updateStatus = async (id: string, status: IncidentStatus) => {
+    await IncidentAPI.updateIncidentStatus(id, status);
+    const updatedIncident = await IncidentAPI.getIncidentById(id);
+    dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
+  };
+
+  const assignIncident = async (id: string, userId: string) => {
+    await IncidentAPI.assignIncident(id, userId);
+    const updatedIncident = await IncidentAPI.getIncidentById(id);
+    dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
+  };
+
+  const addNote = async (incidentId: string, note: Note) => {
+    const savedNote = await IncidentAPI.addNoteToIncident(incidentId, note);
+    dispatch({ type: "ADD_NOTE", payload: { incidentId, note: savedNote } });
+  };
+
+  const escalateIncident = async (incidentId: string) => {
+    await IncidentAPI.escalateIncident(incidentId);
+    const updatedIncident = await IncidentAPI.getIncidentById(incidentId);
+    dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
+  };
+
   return (
-    <IncidentContext.Provider value={{ state, dispatch }}>
+    <IncidentContext.Provider
+      value={{
+        state,
+        dispatch,
+        createIncident,
+        updateStatus,
+        assignIncident,
+        addNote,
+        escalateIncident,
+      }}
+    >
       {children}
     </IncidentContext.Provider>
   );
@@ -150,8 +170,7 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
 
 export function useIncidents() {
   const context = useContext(IncidentContext);
-  if (!context) {
-    throw new Error("useIncidents must be used within an IncidentProvider");
-  }
+  if (!context)
+    throw new Error("useIncidents must be used within IncidentProvider");
   return context;
 }

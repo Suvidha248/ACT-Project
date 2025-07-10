@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
+import { toast } from "react-toastify";
 import {
-  fetchUsers,
-  editUser,
   deleteUser,
+  editUser,
   fetchRoles,
+  fetchUsers,
 } from "../../services/userService";
-
-interface User {
-  id: number;
-  fullName: string;
-  role: string;
-}
+import { User } from "../../types";
 
 Modal.setAppElement("#root");
 
@@ -37,7 +33,7 @@ const UsersTab: React.FC = () => {
         setRoles(fetchedRoles);
       } catch (error) {
         console.error(error);
-        alert("Failed to load users or roles.");
+        toast.error("Failed to load users or roles.");
       }
     };
     fetchData();
@@ -46,7 +42,7 @@ const UsersTab: React.FC = () => {
   const openEditModal = (user: User) => {
     setEditableUser({
       ...user,
-      role: user.role || roles[0] || "", // default to first role if role is empty
+      role: user.role || roles[0] || "",
     });
     setIsModalOpen(true);
   };
@@ -68,9 +64,10 @@ const UsersTab: React.FC = () => {
           prev.map((u) => (u.id === updated.id ? updated : u))
         );
         setIsModalOpen(false);
+        toast.success("User updated successfully");
       } catch (error) {
         console.error(error);
-        alert("Failed to save user changes.");
+        toast.error("Failed to update user");
       }
     }
   };
@@ -85,9 +82,10 @@ const UsersTab: React.FC = () => {
         await deleteUser(deleteUserTarget.id);
         setUsers((prev) => prev.filter((u) => u.id !== deleteUserTarget.id));
         setDeleteUserTarget(null);
+        toast.success("User deleted successfully");
       } catch (error) {
         console.error(error);
-        alert("Failed to delete user.");
+        toast.error("Failed to delete user");
       }
     }
   };
@@ -97,7 +95,7 @@ const UsersTab: React.FC = () => {
   };
 
   const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.fullName
+    const matchesSearch = (user.name || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     const matchesRole = selectedRole ? user.role === selectedRole : true;
@@ -120,7 +118,6 @@ const UsersTab: React.FC = () => {
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
-
         <select
           className="p-2 bg-slate-700 text-white rounded"
           value={selectedRole}
@@ -140,7 +137,7 @@ const UsersTab: React.FC = () => {
           <thead>
             <tr className="bg-slate-700 text-teal-400 text-sm uppercase">
               <th className="p-3">#</th>
-              <th className="p-3">Full Name</th>
+              <th className="p-3">Name</th>
               <th className="p-3">Role</th>
               <th className="p-3">Action</th>
             </tr>
@@ -155,7 +152,7 @@ const UsersTab: React.FC = () => {
                   <td className="p-3">
                     {(currentPage - 1) * usersPerPage + index + 1}
                   </td>
-                  <td className="p-3">{user.fullName}</td>
+                  <td className="p-3">{user.name}</td>
                   <td className="p-3">{user.role}</td>
                   <td className="p-3 space-x-2">
                     <button
@@ -216,10 +213,10 @@ const UsersTab: React.FC = () => {
         <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
         <div className="space-y-4">
           <input
-            name="fullName"
-            value={editableUser?.fullName || ""}
+            name="name"
+            value={editableUser?.name || ""}
             onChange={handleInputChange}
-            placeholder="Full Name"
+            placeholder="Name"
             className="w-full bg-slate-700 text-white px-3 py-2 rounded"
           />
           <select
@@ -262,7 +259,7 @@ const UsersTab: React.FC = () => {
         <h3 className="text-xl font-bold text-red-500 mb-4">Confirm Delete</h3>
         <p className="mb-6 text-slate-300">
           Are you sure you want to delete user{" "}
-          <span className="font-semibold">{deleteUserTarget?.fullName}</span>?
+          <span className="font-semibold">{deleteUserTarget?.name}</span>?
         </p>
         <div className="flex justify-center space-x-4">
           <button
