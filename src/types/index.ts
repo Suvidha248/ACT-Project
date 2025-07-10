@@ -61,6 +61,7 @@ export interface Incident {
   notes: Note[];
   escalationLevel: number;
   slaDeadline: Date;
+  additionalContext?: string;
 }
 
 export interface IncidentStats {

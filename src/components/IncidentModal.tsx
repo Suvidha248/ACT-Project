@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "react-modal";
 import { fetchUsers } from "../services/userService";
-import { Incident, User } from "../types"; // ✅ Import Incident and User from types
+import { Incident, User } from "../types";
 
 interface IncidentModalProps {
   isOpen: boolean;
@@ -34,7 +34,6 @@ const IncidentModal: React.FC<IncidentModalProps> = ({
   }, []);
 
   const handleSubmit = () => {
-    // Construct new incident data using initialData as base for required fields
     const newIncident: Incident = {
       ...initialData!,
       title,
