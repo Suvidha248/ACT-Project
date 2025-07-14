@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import UsersTab from "./UsersTab";
-import AlertHierarchyTab from "./AlertHierarchyTab";
 import { useAuth } from "../../context/AuthContext";
+import AlertHierarchyTab from "./AlertHierarchyTab";
+import UsersTab from "./UsersTab";
 
 const AdminPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"users" | "alerts">("users");

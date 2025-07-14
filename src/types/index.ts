@@ -21,6 +21,7 @@ export interface User {
   email: string;
   role: string;
   department: string;
+  group: string;
   facility?: string;
 }
 
@@ -29,17 +30,33 @@ export interface UserOption {
   role: string;
 }
 
+export interface Author {
+  id: string;
+  name: string;
+  role: string;
+  email?: string; // Make email optional if needed
+}
+
 export interface Note {
+  id: string;
+  content: string;
+  author: Author
+  createdAt: Date;
+  type?: 'system' | 'user' | 'escalation';
+  isInternal: boolean; // ✅ This property is required
+}
+
+export interface ServerNote {
   id: string;
   content: string;
   author: {
     id: string;
     name: string;
-    email: string;
+    role: string;
   };
-  createdAt: Date;
-  type?: 'system' | 'user' | 'escalation';
-  isInternal: boolean; // ✅ This property is required
+  createdAt: string | Date;
+  type: string;
+  isInternal: boolean;
 }
 
 export interface Incident {

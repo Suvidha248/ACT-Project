@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
+import { FaPen, FaPlus, FaTrash } from "react-icons/fa";
 import Modal from "react-modal";
-import { FaTrash, FaPen, FaPlus } from "react-icons/fa";
+import { toast } from "react-toastify";
+import {
+  createAlert,
+  deleteAlert,
+  fetchAlerts,
+  updateAlert,
+} from "../../services/alertService";
 import { fetchUsers } from "../../services/userService";
 import { User } from "../../types";
-import {
-  fetchAlerts,
-  createAlert,
-  updateAlert,
-  deleteAlert,
-} from "../../services/alertService";
 
 Modal.setAppElement("#root");
 
@@ -56,6 +57,7 @@ const AlertHierarchyTab: React.FC = () => {
         setUsers(usersData);
       } catch (error) {
         console.error("Failed to load data", error);
+        toast.error("Failed to load data");
       }
     };
     fetchData();
@@ -67,6 +69,7 @@ const AlertHierarchyTab: React.FC = () => {
       setAlerts(updatedAlerts);
     } catch (err) {
       console.error("Failed to refresh alerts", err);
+      toast.error("Failed to refresh alerts");
     }
   };
 
@@ -142,9 +145,10 @@ const AlertHierarchyTab: React.FC = () => {
       await deleteAlert(deleteAlertTarget.id);
       await refreshAlerts();
       setDeleteAlertTarget(null);
+      toast.success("Alert deleted successfully");
     } catch (err) {
       console.error("Delete failed:", err);
-      alert("Failed to delete alert: " + (err as Error).message);
+      toast.error("Failed to delete alert");
     }
   };
 
@@ -154,7 +158,7 @@ const AlertHierarchyTab: React.FC = () => {
 
   const handleSave = async () => {
     if (!formData.type || !formData.role || !formData.fullNames?.length) {
-      alert("Please fill all required fields.");
+      toast.error("Please fill all required fields");
       return;
     }
 
@@ -166,14 +170,16 @@ const AlertHierarchyTab: React.FC = () => {
     try {
       if (formData.id) {
         await updateAlert(formData.id, payload);
+        toast.success("Alert updated successfully");
       } else {
         await createAlert(payload);
+        toast.success("Alert created successfully");
       }
       setIsModalOpen(false);
       await refreshAlerts();
     } catch (err) {
       console.error("Save failed:", err);
-      alert("Failed to save alert: " + (err as Error).message);
+      toast.error("Failed to save alert");
     }
   };
 
