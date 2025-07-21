@@ -17,12 +17,32 @@ export type AlertType =
 
 export interface User {
   id: string;
-  name: string;
+  fullName: string;
+  username: string;
   email: string;
-  role: string;
+  facilityName: string;
   department: string;
+  role: string;
   group: string;
-  facility?: string;
+  isActive: boolean;
+  createdAt: {
+    seconds: number;
+    nanos: number;
+  };
+  updatedAt: {
+    seconds: number;
+    nanos: number;
+  };
+  displayName: string;
+  uid: string;
+  createdAtAsTimestamp: {
+    seconds: number;
+    nanos: number;
+  };
+  updatedAtAsTimestamp: {
+    seconds: number;
+    nanos: number;
+  };
 }
 
 export interface UserOption {
@@ -32,18 +52,18 @@ export interface UserOption {
 
 export interface Author {
   id: string;
-  name: string;
+  fullName: string;
   role: string;
-  email?: string; // Make email optional if needed
+  email?: string;
 }
 
 export interface Note {
   id: string;
   content: string;
-  author: Author
+  author: Author;
   createdAt: Date;
   type?: 'system' | 'user' | 'escalation';
-  isInternal: boolean; // ✅ This property is required
+  isInternal: boolean;
 }
 
 export interface ServerNote {
@@ -51,7 +71,7 @@ export interface ServerNote {
   content: string;
   author: {
     id: string;
-    name: string;
+    fullName: string;
     role: string;
   };
   createdAt: string | Date;

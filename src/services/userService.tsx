@@ -17,7 +17,6 @@ const getAuthHeaders = (): Record<string, string> => {
   return headers;
 };
 
-// Fetch all users with authentication
 export const fetchUsers = async (): Promise<User[]> => {
   try {
     console.log('🔄 Fetching users...');
@@ -36,7 +35,7 @@ export const fetchUsers = async (): Promise<User[]> => {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    const users = await response.json();
+    const users: User[] = await response.json();
     console.log('✅ Users fetched successfully:', users.length);
     return users;
     
