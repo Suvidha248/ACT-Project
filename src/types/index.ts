@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export type IncidentStatus =
   | "new"
   | "acknowledged"
@@ -77,3 +79,20 @@ export interface Alert {
   role?: string;
   fullName?: string;
 }
+
+export interface ChatMessage {
+  senderId: string;
+  text: string;
+  timestamp: Timestamp;
+  chatId?: string;
+  participants?: string[];
+}
+
+export type NotificationMessage = {
+  id: number;
+  message: string;
+  read: boolean;
+  type: string;
+  role: string;
+  timestamp: string;
+};

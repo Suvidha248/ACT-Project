@@ -14,6 +14,7 @@ import { IncidentTrackerPage } from "./pages/IncidentTrackerPage";
 import UsersPage from "./pages/UsersPage";
 import UploadUsers from "./pages/UploadUsers";
 import AdminPanel from "./components/AdminPanel/AdminPanel";
+import { ChatProvider } from "./context/ChatContext";
 
 const Unauthorized = () => (
   <div className="p-6">
@@ -24,91 +25,96 @@ const Unauthorized = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <IncidentProvider>
-        <Router>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={<Login />} />
+    <ChatProvider>
+      <AuthProvider>
+        <IncidentProvider>
+          <Router>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
 
-            <Route element={<Layout />}>
-              <Route path="/unauthorized" element={<Unauthorized />} />
+              <Route element={<Layout />}>
+                <Route path="/unauthorized" element={<Unauthorized />} />
 
-              <Route element={<PrivateRoute />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/incidents" element={<IncidentsPage />} />
-                <Route path="/incidents/:id" element={<IncidentDetailPage />} />
-                <Route path="/tracker" element={<IncidentTrackerPage />} />
-                <Route path="/users" element={<UsersPage />} />
+                <Route element={<PrivateRoute />}>
+                  <Route path="/" element={<DashboardPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/incidents" element={<IncidentsPage />} />
+                  <Route
+                    path="/incidents/:id"
+                    element={<IncidentDetailPage />}
+                  />
+                  <Route path="/tracker" element={<IncidentTrackerPage />} />
+                  <Route path="/users" element={<UsersPage />} />
 
-                <Route
-                  path="/upload-users"
-                  element={
-                    <ProtectedRoute allowedRoles={["Admin"]}>
-                      <UploadUsers />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/upload-users"
+                    element={
+                      <ProtectedRoute allowedRoles={["Admin"]}>
+                        <UploadUsers />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/admin"
-                  element={
-                    <ProtectedRoute allowedRoles={["Admin"]}>
-                      <AdminPanel />
-                    </ProtectedRoute>
-                  }
-                />
+                  <Route
+                    path="/admin"
+                    element={
+                      <ProtectedRoute allowedRoles={["Admin"]}>
+                        <AdminPanel />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/settings"
-                  element={
-                    <ProtectedRoute allowedRoles={["Admin", "Leader"]}>
+                  <Route
+                    path="/settings"
+                    element={
+                      <ProtectedRoute allowedRoles={["Admin", "Leader"]}>
+                        <div className="p-6">
+                          <h2 className="text-2xl font-bold gradient-text">
+                            Settings – Coming Soon
+                          </h2>
+                        </div>
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/reports"
+                    element={
                       <div className="p-6">
                         <h2 className="text-2xl font-bold gradient-text">
-                          Settings – Coming Soon
+                          Reports – Coming Soon
                         </h2>
                       </div>
-                    </ProtectedRoute>
-                  }
-                />
-
-                <Route
-                  path="/reports"
-                  element={
-                    <div className="p-6">
-                      <h2 className="text-2xl font-bold gradient-text">
-                        Reports – Coming Soon
-                      </h2>
-                    </div>
-                  }
-                />
-                <Route
-                  path="/team"
-                  element={
-                    <div className="p-6">
-                      <h2 className="text-2xl font-bold gradient-text">
-                        Team Management – Coming Soon
-                      </h2>
-                    </div>
-                  }
-                />
-                <Route
-                  path="/docs"
-                  element={
-                    <div className="p-6">
-                      <h2 className="text-2xl font-bold gradient-text">
-                        Documentation – Coming Soon
-                      </h2>
-                    </div>
-                  }
-                />
+                    }
+                  />
+                  <Route
+                    path="/team"
+                    element={
+                      <div className="p-6">
+                        <h2 className="text-2xl font-bold gradient-text">
+                          Team Management – Coming Soon
+                        </h2>
+                      </div>
+                    }
+                  />
+                  <Route
+                    path="/docs"
+                    element={
+                      <div className="p-6">
+                        <h2 className="text-2xl font-bold gradient-text">
+                          Documentation – Coming Soon
+                        </h2>
+                      </div>
+                    }
+                  />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </Router>
-      </IncidentProvider>
-    </AuthProvider>
+            </Routes>
+          </Router>
+        </IncidentProvider>
+      </AuthProvider>
+    </ChatProvider>
   );
 }
 

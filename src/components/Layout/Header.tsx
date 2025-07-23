@@ -1,24 +1,16 @@
 import { signOut } from "firebase/auth";
 import { motion } from "framer-motion";
-import {
-  Activity,
-  Bell,
-  Brain,
-  LogOut,
-  Settings,
-  Shield,
-  User,
-} from "lucide-react";
+import { Activity, Brain, LogOut, Settings, Shield, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { auth } from "../../firebase";
+import NotificationBell from "../NotificationBell";
 
 interface HeaderProps {
   isAuthPage?: boolean;
 }
 
 export function Header({ isAuthPage }: HeaderProps) {
-  const unreadCount = 3;
   const { user, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -82,23 +74,8 @@ export function Header({ isAuthPage }: HeaderProps) {
               <div className="w-2 h-2 bg-teal-400 rounded-full animate-pulse" />
             </motion.div>
 
-            <motion.button
-              className="relative p-3 glass-card-hover rounded-xl group"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Bell className="w-5 h-5 text-slate-300 group-hover:text-teal-300" />
-              {unreadCount > 0 && (
-                <motion.span
-                  className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                >
-                  {unreadCount}
-                </motion.span>
-              )}
-            </motion.button>
+            {/* ✅ Real-time Notification Bell */}
+            {profile?.id && <NotificationBell userId={profile.id} />}
 
             <motion.button
               className="p-3 glass-card-hover rounded-xl group hidden sm:block"

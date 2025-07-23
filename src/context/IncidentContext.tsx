@@ -1,3 +1,4 @@
+// ✅ Cleaned & fixed IncidentContext.tsx
 import React, {
   createContext,
   useContext,
@@ -6,8 +7,9 @@ import React, {
   ReactNode,
 } from "react";
 import { Incident, IncidentStatus, User, Note } from "../types";
-import * as IncidentAPI from "../services/incidentService";
+import * as IncidentAPI from "../services/IncidentService";
 import { getAllUsers } from "../services/userService";
+import { IncidentFormData } from "../services/IncidentService";
 
 interface IncidentState {
   incidents: Incident[];
@@ -120,11 +122,23 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
         console.error("Error loading incidents or users", error);
       }
     };
-    fetchData();
-  }, []);
+
+    if (state.incidents.length === 0 && state.users.length === 0) {
+      fetchData();
+    }
+  }, [state.incidents.length, state.users.length]);
 
   const createIncident = async (data: Partial<Incident>) => {
-    const incident = await IncidentAPI.createIncident(data);
+    const form: IncidentFormData = {
+      title: data.title || "Untitled",
+      description: data.description || "No description provided",
+      location: data.location || "Unknown",
+      priority: data.priority || "low",
+      alertType: data.alertType || "equipment",
+      additionalDetails: data.additionalContext || "",
+    };
+
+    const incident = await IncidentAPI.createIncident(form);
     dispatch({ type: "ADD_INCIDENT", payload: incident });
   };
 
