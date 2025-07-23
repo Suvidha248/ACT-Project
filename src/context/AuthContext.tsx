@@ -10,6 +10,7 @@ import {
 import { auth, db } from "../firebase";
 
 interface UserProfile {
+  id: string; // ✅ Added this line
   uid: string;
   email: string;
   displayName: string;
@@ -43,19 +44,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
+
       if (firebaseUser) {
         console.log("firebaseUser", firebaseUser);
         const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+
         if (userDoc.exists()) {
-          const userData = userDoc.data() as UserProfile;
-          console.log("userData", userData);
-          // 🔁 Normalize roles here
+          const userData = {
+            ...(userDoc.data() as UserProfile),
+            id: firebaseUser.uid, // ✅ Assign id from Firestore UID
+          };
+
+          // 🔁 Normalize roles
           if (userData.role === "System Admin") {
             userData.role = "Admin";
           } else if (userData.role === "Team Leader") {
             userData.role = "Leader";
           }
 
+          console.log("userData", userData);
           setProfile(userData);
         } else {
           setProfile(null);
@@ -64,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
       }
     });
+
     return unsubscribe;
   }, []);
 

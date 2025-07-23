@@ -4,15 +4,12 @@
     "lib": ["ES2023"],
     "module": "ESNext",
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
+    "noEmit": true, // ✅ Required
+    "composite": true, // ✅ Required by references
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,

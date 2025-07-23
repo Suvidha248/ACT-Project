@@ -5,7 +5,10 @@ const API_URL = "http://localhost:8080/api/admin/users";
 type APIUser = {
   id: number;
   fullName: string;
+  email: string;
+  department: string;
   role: string;
+  group: string;
 };
 
 /**
@@ -38,9 +41,10 @@ export const fetchUsers = async (): Promise<User[]> => {
   const users: User[] = apiUsers.map((apiUser) => ({
     id: apiUser.id.toString(),
     name: apiUser.fullName,
-    email: "placeholder@example.com",
+    email: apiUser.email,
+    department: apiUser.department,
     role: apiUser.role,
-    department: "General",
+    group: apiUser.group,
   }));
 
   return users;
@@ -90,6 +94,8 @@ export const editUser = async (updatedUser: User): Promise<User> => {
 
   const payload = {
     fullName: updatedUser.name,
+    email: updatedUser.email,
+    department: updatedUser.department,
     role: updatedUser.role,
   };
 
@@ -116,9 +122,9 @@ export const editUser = async (updatedUser: User): Promise<User> => {
   return {
     id: apiUser.id.toString(),
     name: apiUser.fullName,
-    email: "placeholder@example.com",
+    email: apiUser.email,
+    department: apiUser.department,
     role: apiUser.role,
-    department: "General",
   };
 };
 

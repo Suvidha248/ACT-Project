@@ -178,3 +178,22 @@
   background-color: rgba(100, 255, 218, 0.3);
   border-radius: 8px;
 }
+
+/* In your CSS file */
+.my-msg {
+  background-color: #007bff;
+  color: white;
+  padding: 8px;
+  border-radius: 10px;
+  margin: 4px;
+  align-self: flex-end;
+}
+
+.their-msg {
+  background-color: #eee;
+  color: black;
+  padding: 8px;
+  border-radius: 10px;
+  margin: 4px;
+  align-self: flex-start;
+}

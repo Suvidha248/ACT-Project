@@ -9,7 +9,7 @@ import { Badge } from "../Shared/Badge";
 import { Button } from "../Shared/Button";
 import { formatDistanceToNow } from "date-fns";
 import { ArrowLeft } from "lucide-react";
-import { updateIncident, deleteIncident } from "../../services/incidentService";
+import { updateIncident, deleteIncident } from "../../services/IncidentService";
 import { IncidentPriority, AlertType } from "../../types";
 
 export function IncidentDetail() {
