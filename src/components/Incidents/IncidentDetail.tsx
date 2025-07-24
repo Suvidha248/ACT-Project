@@ -8,7 +8,7 @@ import {
   TrendingUp,
   User
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Modal from "react-modal";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -16,7 +16,7 @@ import { useIncidents } from "../../context/IncidentContext";
 import {
   deleteIncident,
   getFilteredIncidents,
-  // getIncidentById,
+  getIncidentById,
   updateIncident
 } from "../../services/IncidentService";
 import { AlertType, Incident, IncidentPriority } from "../../types";
@@ -48,97 +48,8 @@ export function IncidentDetail() {
     location: "",
   });
 
-  // Base URL configuration
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
-
-  // Enhanced auth headers function
-  const getAuthHeaders = (): Record<string, string> => {
-    const token = sessionStorage.getItem("idToken");
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
-    };
-    
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-      headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-    }
-    
-    return headers;
-  };
-
-  // Enhanced error handling function
-  const handleApiError = (response: Response) => {
-    switch (response.status) {
-      case 401:
-        toast.error('Authentication expired. Please log in again.');
-        navigate('/login');
-        break;
-      case 403:
-        toast.error('Access denied. You do not have permission to view this incident.');
-        navigate('/incidents');
-        break;
-      case 404:
-        toast.error('Incident not found.');
-        break;
-      case 500:
-        toast.error('Server error. Please try again later.');
-        break;
-      default:
-        toast.error(`Request failed: ${response.status} ${response.statusText}`);
-    }
-  };
-
-  // Fetch facility-specific incidents using backend facility endpoints
-  const fetchFacilityIncidents = async (facility: string) => {
-    try {
-      const normalizedFacility = facility.toLowerCase();
-      let facilityIncidents = [];
-
-      if (normalizedFacility === 'atlanta') {
-        // Use facility-specific API with authentication
-        const response = await fetch(`${API_BASE_URL}/incidents/atlanta`, {
-          headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          facilityIncidents = data.data || data;
-          console.log('✅ Atlanta incidents loaded:', facilityIncidents.length);
-        } else {
-          handleApiError(response);
-        }
-      } else if (normalizedFacility === 'novi') {
-        // Use facility-specific API with authentication
-        const response = await fetch(`${API_BASE_URL}/incidents/novi`, {
-          headers: getAuthHeaders()
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          facilityIncidents = data.data || data;
-          console.log('✅ Novi incidents loaded:', facilityIncidents.length);
-        } else {
-          handleApiError(response);
-        }
-      } else {
-        // Fallback to filtered incidents for other facilities
-        const response = await getFilteredIncidents({ facility });
-        facilityIncidents = response.data;
-      }
-
-      // Update context with facility-based incidents
-      dispatch({ type: 'SET_INCIDENTS', payload: facilityIncidents });
-      
-      return facilityIncidents;
-    } catch (error) {
-      console.error('Error fetching facility incidents:', error);
-      toast.error('Failed to load facility incidents');
-      return [];
-    }
-  };
-
-  // Enhanced incident data fetching with authentication
-  const fetchIncidentData = async () => {
+  // ✅ FIXED: Enhanced incident data fetching using service layer
+  const fetchIncidentData = useCallback(async () => {
     if (!id) {
       setError('No incident ID provided');
       setLoading(false);
@@ -151,42 +62,35 @@ export function IncidentDetail() {
 
       console.log('🔍 Fetching incident details for ID:', id);
 
-      // Fetch the specific incident with authentication
-      const response = await fetch(`${API_BASE_URL}/incidents/${id}`, {
-        headers: getAuthHeaders()
-      });
-
-      if (!response.ok) {
-        handleApiError(response);
-        setError(`Failed to load incident: ${response.status} ${response.statusText}`);
-        return;
-      }
-
-      const incidentData = await response.json();
+      // Use the service layer function which handles auth and errors
+      const incidentData = await getIncidentById(id);
       setIncident(incidentData);
 
       console.log('✅ Incident loaded:', incidentData);
 
       // Fetch facility-based incidents to populate context
-      if (incidentData.location || incidentData.facility) {
-        const facilityName = incidentData.facility || incidentData.location;
-        console.log('🏢 Fetching facility incidents for:', facilityName);
-        await fetchFacilityIncidents(facilityName);
+      if (incidentData.location) {
+        console.log('🏢 Fetching facility incidents for:', incidentData.location);
+        const facilityIncidents = await getFilteredIncidents({ 
+          facility: incidentData.location 
+        });
+        dispatch({ type: 'SET_INCIDENTS', payload: facilityIncidents.data });
       }
 
     } catch (error) {
       console.error('❌ Error fetching incident:', error);
-      setError('Failed to load incident data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load incident data';
+      setError(errorMessage);
       toast.error('Failed to load incident details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, dispatch]);
 
   // Fetch incident data on component mount
   useEffect(() => {
     fetchIncidentData();
-  }, [id, dispatch, API_BASE_URL]);
+  }, [fetchIncidentData]);
 
   // Initialize edit data when incident loads
   useEffect(() => {
@@ -201,7 +105,7 @@ export function IncidentDetail() {
     }
   }, [incident]);
 
-  // Enhanced edit save with authentication
+  // Enhanced edit save using service layer
   const handleEditSave = async () => {
     try {
       await updateIncident(incident!.id, editData);
@@ -217,7 +121,7 @@ export function IncidentDetail() {
     }
   };
 
-  // Enhanced delete with authentication
+  // Enhanced delete using service layer
   const handleDelete = async () => {
     try {
       await deleteIncident(incident!.id);
@@ -351,11 +255,9 @@ export function IncidentDetail() {
             <p className="text-slate-400 font-mono">
               Incident ID: {incident.id}
             </p>
-            {incident.facility && (
-              <p className="text-slate-500 text-sm">
-                Facility: {incident.facility}
-              </p>
-            )}
+            <p className="text-slate-500 text-sm">
+              Facility: {incident.location}
+            </p>
           </div>
         </div>
         
@@ -408,13 +310,6 @@ export function IncidentDetail() {
                   <p className="mt-1 text-white">{incident.location}</p>
                 </div>
               </div>
-              
-              {incident.additionalContext && (
-                <div>
-                  <label className="text-sm font-medium text-slate-400">Additional Context</label>
-                  <p className="mt-1 text-white">{incident.additionalContext}</p>
-                </div>
-              )}
             </div>
 
             {/* Edit/Delete Buttons */}
@@ -516,7 +411,7 @@ export function IncidentDetail() {
                 <div>
                   <p className="text-sm font-medium text-slate-400">Assigned To</p>
                   <p className="text-sm text-white">
-                    {incident.assignedTo?.name || 'Unassigned'}
+                    {incident.assignedTo?.fullName || 'Unassigned'}
                   </p>
                   {incident.assignedTo?.role && (
                     <p className="text-xs text-slate-500">{incident.assignedTo.role}</p>
@@ -528,7 +423,9 @@ export function IncidentDetail() {
                 <User className="w-4 h-4 text-teal-400" />
                 <div>
                   <p className="text-sm font-medium text-slate-400">Reported By</p>
-                  <p className="text-sm text-white">{incident.reportedBy?.name || 'Unknown'}</p>
+                  <p className="text-sm text-white">
+                    {incident.reportedBy?.fullName || 'Unknown'}
+                  </p>
                   {incident.reportedBy?.role && (
                     <p className="text-xs text-slate-500">{incident.reportedBy.role}</p>
                   )}

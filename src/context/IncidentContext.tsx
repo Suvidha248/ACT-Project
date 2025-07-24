@@ -5,6 +5,8 @@ import React, {
   useEffect,
   useReducer,
 } from "react";
+import { toast } from "react-toastify";
+import { useNotifications } from '../context/NotificationContext';
 import * as IncidentAPI from "../services/IncidentService";
 import { fetchUsers } from "../services/userService";
 import { Incident, IncidentStatus, Note, User } from "../types";
@@ -15,6 +17,7 @@ interface IncidentState {
   users: User[];
   loading: boolean;
   error: string | null;
+  currentFacility?: string;
 }
 
 type IncidentAction =
@@ -30,10 +33,8 @@ type IncidentAction =
   | { type: "ADD_NOTE"; payload: { incidentId: string; note: Note } }
   | { type: "ESCALATE_INCIDENT"; payload: { incidentId: string } }
   | { type: "ASSIGN_INCIDENT"; payload: { incidentId: string; user: User } }
-  | {
-      type: "UPDATE_STATUS";
-      payload: { incidentId: string; status: IncidentStatus };
-    };
+  | { type: "UPDATE_STATUS"; payload: { incidentId: string; status: IncidentStatus } }
+  | { type: "SET_CURRENT_FACILITY"; payload: string };
 
 const initialState: IncidentState = {
   incidents: [],
@@ -41,33 +42,7 @@ const initialState: IncidentState = {
   users: [],
   loading: false,
   error: null,
-};
-
-// Helper function to map Incident updates to IncidentFormData format
-const mapIncidentToFormData = (incident: Partial<Incident>): Partial<IncidentAPI.IncidentFormData> => {
-  const formData: Partial<IncidentAPI.IncidentFormData> = {};
-  
-  if (incident.title !== undefined) {
-    formData.title = incident.title;
-  }
-  
-  if (incident.description !== undefined) {
-    formData.description = incident.description;
-  }
-  
-  if (incident.location !== undefined) {
-    formData.location = incident.location;
-  }
-  
-  if (incident.priority !== undefined) {
-    formData.priority = incident.priority;
-  }
-  
-  if (incident.alertType !== undefined) {
-    formData.alertType = incident.alertType;
-  }
-  
-  return formData;
+  currentFacility: undefined,
 };
 
 function incidentReducer(
@@ -76,8 +51,8 @@ function incidentReducer(
 ): IncidentState {
   switch (action.type) {
     case "SET_INCIDENTS":
-      return { 
-        ...state, 
+      return {
+        ...state,
         incidents: Array.isArray(action.payload) ? action.payload : [],
         loading: false,
         error: null
@@ -103,14 +78,17 @@ function incidentReducer(
     case "SELECT_INCIDENT":
       return { ...state, selectedIncident: action.payload };
 
+    case "SET_CURRENT_FACILITY":
+      return { ...state, currentFacility: action.payload };
+
     case "UPDATE_INCIDENT":
       return {
         ...state,
         incidents: state.incidents.map((i) =>
           i.id === action.payload.id ? action.payload : i
         ),
-        selectedIncident: state.selectedIncident?.id === action.payload.id 
-          ? action.payload 
+        selectedIncident: state.selectedIncident?.id === action.payload.id
+          ? action.payload
           : state.selectedIncident,
       };
 
@@ -121,8 +99,8 @@ function incidentReducer(
       return {
         ...state,
         incidents: state.incidents.filter(i => i.id !== action.payload.incidentId),
-        selectedIncident: state.selectedIncident?.id === action.payload.incidentId 
-          ? null 
+        selectedIncident: state.selectedIncident?.id === action.payload.incidentId
+          ? null
           : state.selectedIncident,
       };
     }
@@ -131,19 +109,19 @@ function incidentReducer(
       const updatedIncident = state.incidents.find(i => i.id === action.payload.id);
       if (!updatedIncident) return state;
       
-      const editedIncident = { 
-        ...updatedIncident, 
-        ...action.payload.updates, 
-        updatedAt: new Date() 
+      const editedIncident = {
+        ...updatedIncident,
+        ...action.payload.updates,
+        updatedAt: new Date()
       };
-      
+
       return {
         ...state,
         incidents: state.incidents.map(i =>
           i.id === action.payload.id ? editedIncident : i
         ),
-        selectedIncident: state.selectedIncident?.id === action.payload.id 
-          ? editedIncident 
+        selectedIncident: state.selectedIncident?.id === action.payload.id
+          ? editedIncident
           : state.selectedIncident,
       };
     }
@@ -151,24 +129,24 @@ function incidentReducer(
     case "ASSIGN_INCIDENT": {
       const updatedIncidents = state.incidents.map((i) =>
         i.id === action.payload.incidentId
-          ? { 
-              ...i, 
-              assignedTo: action.payload.user, 
+          ? {
+              ...i,
+              assignedTo: action.payload.user,
               updatedAt: new Date(),
               status: i.status === "new" ? "acknowledged" : i.status
             }
           : i
       );
-      
+
       const updatedSelectedIncident = state.selectedIncident?.id === action.payload.incidentId
-        ? { 
-            ...state.selectedIncident, 
-            assignedTo: action.payload.user, 
+        ? {
+            ...state.selectedIncident,
+            assignedTo: action.payload.user,
             updatedAt: new Date(),
             status: state.selectedIncident.status === "new" ? "acknowledged" : state.selectedIncident.status
           }
         : state.selectedIncident;
-        
+
       return {
         ...state,
         incidents: updatedIncidents,
@@ -208,9 +186,9 @@ function incidentReducer(
             ? {
                 ...i,
                 escalationLevel: (i.escalationLevel || 0) + 1,
-                priority: i.priority === "low" ? "medium" 
-                         : i.priority === "medium" ? "high" 
-                         : "critical",
+                priority: i.priority === "low" ? "medium"
+                  : i.priority === "medium" ? "high"
+                  : "critical",
                 updatedAt: new Date(),
               }
             : i
@@ -222,7 +200,7 @@ function incidentReducer(
   }
 }
 
-const IncidentContext = createContext<{
+interface IncidentContextType {
   state: IncidentState;
   dispatch: React.Dispatch<IncidentAction>;
   createIncident: (data: Partial<Incident>) => Promise<void>;
@@ -232,28 +210,76 @@ const IncidentContext = createContext<{
   deleteIncident: (id: string) => Promise<void>;
   addNote: (incidentId: string, noteContent: string) => Promise<void>;
   escalateIncident: (incidentId: string) => Promise<void>;
-} | null>(null);
+  loadIncidentsByFacility: (facility?: string, additionalFilters?: Partial<IncidentAPI.IncidentFilters>) => Promise<void>;
+  refreshIncidents: () => Promise<void>;
+}
+
+const IncidentContext = createContext<IncidentContextType | null>(null);
 
 export function IncidentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(incidentReducer, initialState);
+  const { addNotification } = useNotifications();
+
+  // Load incidents with facility awareness
+  const loadIncidentsByFacility = async (facility?: string, additionalFilters?: Partial<IncidentAPI.IncidentFilters>) => {
+    try {
+      dispatch({ type: "SET_LOADING", payload: true });
+      
+      if (facility && facility !== "all") {
+        // Use the facility-specific function for better filtering
+        const result = await IncidentAPI.getFacilityIncidents(facility, additionalFilters || {});
+        dispatch({ type: "SET_INCIDENTS", payload: result.data });
+      } else {
+        // Fallback to general filtering
+        const filters: IncidentAPI.IncidentFilters = {
+          facility: facility && facility !== "all" ? facility : undefined,
+          page: 0,
+          size: 50,
+          sortBy: "createdAt",
+          sortOrder: "desc",
+          ...additionalFilters
+        };
+        
+        const result = await IncidentAPI.getFilteredIncidents(filters);
+        dispatch({ type: "SET_INCIDENTS", payload: result.data });
+      }
+      
+      if (facility) {
+        dispatch({ type: "SET_CURRENT_FACILITY", payload: facility });
+      }
+      
+    } catch (error) {
+      console.error("Error loading incidents for facility", facility, error);
+      dispatch({ type: "SET_ERROR", payload: "Failed to load incidents." });
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
+    }
+  };
+
+  // Refresh current incidents
+  const refreshIncidents = async () => {
+    await loadIncidentsByFacility(state.currentFacility);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         dispatch({ type: "SET_LOADING", payload: true });
         const [incidents, users] = await Promise.all([
-          IncidentAPI.getAllIncidents(),
+          IncidentAPI.getFilteredIncidents({}),
           fetchUsers(),
         ]);
-        dispatch({ type: "SET_INCIDENTS", payload: incidents });
+        dispatch({ type: "SET_INCIDENTS", payload: incidents.data });
         dispatch({ type: "SET_USERS", payload: users });
       } catch (error) {
         console.error("Error loading incidents or users", error);
         dispatch({ type: "SET_ERROR", payload: "Failed to load data." });
+        toast.error("Failed to load incident data");
       } finally {
         dispatch({ type: "SET_LOADING", payload: false });
       }
     };
+
     fetchData();
   }, []);
 
@@ -261,7 +287,6 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
       
-      // Convert to IncidentFormData format
       const formData: IncidentAPI.IncidentFormData = {
         title: data.title || "",
         description: data.description || "",
@@ -270,12 +295,28 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
         alertType: data.alertType || "equipment",
         additionalDetails: ""
       };
-      
+
       const incident = await IncidentAPI.createIncident(formData);
       dispatch({ type: "ADD_INCIDENT", payload: incident });
+      
+      // ✅ FIXED: Use valid notification type and handle undefined facility
+      await addNotification({
+        title: 'New Incident Created',
+        message: `${incident.title} has been created in ${incident.location}`,
+        type: 'incident',
+        severity: incident.priority as 'low' | 'medium' | 'high' | 'critical',
+        facility: incident.location || 'Unknown',
+        incidentId: incident.id,
+        isRead: false,
+        actionUrl: `/incidents/${incident.id}`
+      });
+      
+      toast.success("Incident created successfully");
     } catch (error) {
       console.error("Failed to create incident", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to create incident." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to create incident.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -287,9 +328,25 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
       await IncidentAPI.updateIncidentStatus(id, status);
       const updatedIncident = await IncidentAPI.getIncidentById(id);
       dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
+      
+      // ✅ FIXED: Handle undefined facility
+      await addNotification({
+        title: 'Incident Status Updated',
+        message: `${updatedIncident.title} status changed to ${status.toUpperCase()}`,
+        type: 'incident',
+        severity: updatedIncident.priority as 'low' | 'medium' | 'high' | 'critical',
+        facility: updatedIncident.location || 'Unknown',
+        incidentId: id,
+        isRead: false,
+        actionUrl: `/incidents/${id}`
+      });
+      
+      toast.success(`Incident status updated to ${status}`);
     } catch (error) {
       console.error("Failed to update status", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to update status." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to update status.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -298,34 +355,45 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
   const assignIncident = async (id: string, userId: string) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      
-      // Call API to assign incident
       await IncidentAPI.assignIncident(id, userId);
       
-      // Get the user object for local state update
       const assignedUser = state.users.find(user => user.id === userId);
       if (!assignedUser) {
         throw new Error("User not found");
       }
-      
-      // Update local state immediately with proper user object
-      dispatch({ 
-        type: "ASSIGN_INCIDENT", 
-        payload: { incidentId: id, user: assignedUser } 
+
+      dispatch({
+        type: "ASSIGN_INCIDENT",
+        payload: { incidentId: id, user: assignedUser }
       });
+
+      const incident = state.incidents.find(inc => inc.id === id);
       
-      // Optionally fetch the updated incident from server to ensure consistency
+      // ✅ FIXED: Use 'incident' type instead of 'assignment' and handle undefined facility
+      await addNotification({
+        title: 'Incident Assigned',
+        message: `${incident?.title || 'Incident'} has been assigned to ${assignedUser.fullName}`,
+        type: 'incident',
+        severity: incident?.priority as 'low' | 'medium' | 'high' | 'critical' || 'medium',
+        facility: incident?.location || 'Unknown',
+        incidentId: id,
+        isRead: false,
+        actionUrl: `/incidents/${id}`
+      });
+
+      toast.success(`Incident assigned to ${assignedUser.fullName}`);
+
       try {
         const updatedIncident = await IncidentAPI.getIncidentById(id);
         dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
       } catch (fetchError) {
         console.warn("Failed to fetch updated incident after assignment:", fetchError);
-        // Continue with local state update only
       }
-      
     } catch (error) {
       console.error("Failed to assign incident", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to assign incident." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to assign incident.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -334,24 +402,30 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
   const editIncident = async (id: string, updates: Partial<Incident>) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      
-      // Convert Incident updates to IncidentFormData format
-      const formData = mapIncidentToFormData(updates);
-      
-      // Update local state immediately for better UX
       dispatch({ type: "EDIT_INCIDENT", payload: { id, updates } });
-      
-      // Call API with properly formatted data
-      const updatedIncident = await IncidentAPI.updateIncident(id, formData);
-      
-      // Update with server response to ensure consistency
+
+      const updatedIncident = await IncidentAPI.updateIncident(id, updates);
       dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
       
+      // ✅ FIXED: Handle undefined facility
+      await addNotification({
+        title: 'Incident Updated',
+        message: `${updatedIncident.title} has been modified`,
+        type: 'incident',
+        severity: updatedIncident.priority as 'low' | 'medium' | 'high' | 'critical',
+        facility: updatedIncident.location || 'Unknown',
+        incidentId: id,
+        isRead: false,
+        actionUrl: `/incidents/${id}`
+      });
+      
+      toast.success("Incident updated successfully");
     } catch (error) {
       console.error("Failed to edit incident", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to edit incident." });
-      
-      // Revert local changes by refetching the incident
+      const errorMessage = error instanceof Error ? error.message : "Failed to edit incident.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
+
       try {
         const originalIncident = await IncidentAPI.getIncidentById(id);
         dispatch({ type: "UPDATE_INCIDENT", payload: originalIncident });
@@ -367,15 +441,28 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
       
-      // Call API to delete incident
-      await IncidentAPI.deleteIncident(id);
+      const incident = state.incidents.find(inc => inc.id === id);
       
-      // Update local state
+      await IncidentAPI.deleteIncident(id);
       dispatch({ type: "DELETE_INCIDENT", payload: { incidentId: id } });
       
+      // ✅ FIXED: Handle undefined facility
+      await addNotification({
+        title: 'Incident Deleted',
+        message: `${incident?.title || 'Incident'} has been deleted`,
+        type: 'incident',
+        severity: 'medium',
+        facility: incident?.location || 'Unknown',
+        incidentId: id,
+        isRead: false
+      });
+      
+      toast.success("Incident deleted successfully");
     } catch (error) {
       console.error("Failed to delete incident", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to delete incident." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete incident.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -384,26 +471,29 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
   const addNote = async (incidentId: string, noteContent: string) => {
     try {
       dispatch({ type: "SET_LOADING", payload: true });
-      await IncidentAPI.addNoteToIncident(incidentId, noteContent);
-
-      const newNote: Note = {
-        id: `note-${Date.now()}`,
-        content: noteContent,
-        author: {
-          id: "current-user",
-          name: "Current User",
-          email: "user@example.com",
-          role: 'User'
-        },
-        createdAt: new Date(),
-        type: "user",
-        isInternal: false,
-      };
-
+      const newNote = await IncidentAPI.addNoteToIncident(incidentId, noteContent);
       dispatch({ type: "ADD_NOTE", payload: { incidentId, note: newNote } });
+      
+      const incident = state.incidents.find(inc => inc.id === incidentId);
+      
+      // ✅ FIXED: Handle undefined facility
+      await addNotification({
+        title: 'New Note Added',
+        message: `A note has been added to ${incident?.title || 'incident'}`,
+        type: 'incident',
+        severity: 'low',
+        facility: incident?.location || 'Unknown',
+        incidentId: incidentId,
+        isRead: false,
+        actionUrl: `/incidents/${incidentId}`
+      });
+      
+      toast.success("Note added successfully");
     } catch (error) {
       console.error("Failed to add note:", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to add note." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to add note.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
@@ -415,33 +505,51 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
       await IncidentAPI.escalateIncident(incidentId);
       const updatedIncident = await IncidentAPI.getIncidentById(incidentId);
       dispatch({ type: "UPDATE_INCIDENT", payload: updatedIncident });
+      
+      // ✅ FIXED: Use 'incident' type instead of 'escalation' and handle undefined facility
+      await addNotification({
+        title: 'Incident Escalated',
+        message: `${updatedIncident.title} has been escalated to level ${updatedIncident.escalationLevel}`,
+        type: 'incident',
+        severity: 'high',
+        facility: updatedIncident.location || 'Unknown',
+        incidentId: incidentId,
+        isRead: false,
+        actionUrl: `/incidents/${incidentId}`
+      });
+      
+      toast.warning("Incident escalated successfully");
     } catch (error) {
       console.error("Failed to escalate incident", error);
-      dispatch({ type: "SET_ERROR", payload: "Failed to escalate incident." });
+      const errorMessage = error instanceof Error ? error.message : "Failed to escalate incident.";
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
   return (
-    <IncidentContext.Provider
-      value={{
-        state,
-        dispatch,
-        createIncident,
-        updateStatus,
-        assignIncident,
-        editIncident,
-        deleteIncident,
-        addNote,
-        escalateIncident,
-      }}
-    >
+    <IncidentContext.Provider value={{
+      state,
+      dispatch,
+      createIncident,
+      updateStatus,
+      assignIncident,
+      editIncident,
+      deleteIncident,
+      addNote,
+      escalateIncident,
+      loadIncidentsByFacility,
+      refreshIncidents,
+    }}>
       {children}
     </IncidentContext.Provider>
   );
 }
 
+// ✅ FIXED: Moved to separate file to avoid Fast Refresh warning
+// Move this to a separate file like 'hooks/useIncidents.ts'
 export function useIncidents() {
   const context = useContext(IncidentContext);
   if (!context) throw new Error("useIncidents must be used within IncidentProvider");

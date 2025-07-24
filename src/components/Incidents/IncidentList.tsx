@@ -1,12 +1,16 @@
+// components/Incidents/IncidentList.tsx
 import { AlertCircle, Filter, Plus, RefreshCw, Search } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
-import { useIncidents } from "../../context/IncidentContext";
 import { getFilteredIncidents, IncidentFilters } from "../../services/IncidentService";
+import { Incident } from "../../types";
 import { Badge } from "../Shared/Badge";
 import { Button } from "../Shared/Button";
 import { IncidentCard } from "./IncidentCard";
 import { IncidentForm } from "./IncidentForm";
+
+const ITEMS_PER_PAGE = 10;
 
 interface PaginationProps {
   currentPage: number;
@@ -15,32 +19,35 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
+// ✅ RESTORED: Glass theme pagination
 const Pagination = ({ currentPage, totalItems, pageSize, onPageChange }: PaginationProps) => {
   const totalPages = Math.ceil(totalItems / pageSize);
- 
   if (totalPages <= 1) return null;
- 
+
   return (
     <div className="flex items-center justify-between mt-6 glass-card p-4 rounded-xl">
       <div className="text-sm text-slate-400">
-        Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalItems)} of {totalItems} incidents
+        Showing {Math.min((currentPage - 1) * pageSize + 1, totalItems)} to{" "}
+        {Math.min(currentPage * pageSize, totalItems)} of {totalItems} results
       </div>
       <div className="flex space-x-2">
         <Button
-          variant="secondary"
-          disabled={currentPage === 0}
+          variant="outline"
+          size="sm"
           onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
           className="px-3 py-1 text-sm"
         >
           Previous
         </Button>
         <span className="flex items-center px-3 py-1 text-sm text-slate-400">
-          Page {currentPage + 1} of {totalPages}
+          Page {currentPage} of {totalPages}
         </span>
         <Button
-          variant="secondary"
-          disabled={currentPage >= totalPages - 1}
+          variant="outline"
+          size="sm"
           onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
           className="px-3 py-1 text-sm"
         >
           Next
@@ -50,6 +57,7 @@ const Pagination = ({ currentPage, totalItems, pageSize, onPageChange }: Paginat
   );
 };
 
+// ✅ RESTORED: Glass theme loading spinner
 const LoadingSpinner = () => (
   <div className="text-center py-12">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto"></div>
@@ -57,6 +65,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
+// ✅ RESTORED: Glass theme error message
 const ErrorMessage = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
     <div className="flex items-center space-x-2">
@@ -73,115 +82,109 @@ const ErrorMessage = ({ error, onRetry }: { error: string; onRetry: () => void }
   </div>
 );
 
-export function IncidentList() {
-  const { state, dispatch } = useIncidents();
+export const IncidentList = () => {
   const { user, profile } = useAuth();
- 
-  // Filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [priorityFilter, setPriorityFilter] = useState("all");
-  const [facilityFilter, setFacilityFilter] = useState("all");
- 
-  // UI states
-  const [showIncidentForm, setShowIncidentForm] = useState(false);
-  const loading = state.loading;
-  const error = state.error;
- 
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(20);
+
+  // Local state for filtered incidents
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [totalItems, setTotalItems] = useState(0);
 
-  // Set facility filter when profile loads
+  // Filter states
+  const [facilityFilter, setFacilityFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showIncidentForm, setShowIncidentForm] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const loadIncidents = useCallback(async () => {
+    if (!user) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const filters: IncidentFilters = {
+        facility: facilityFilter === "all" ? undefined : facilityFilter,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        priority: priorityFilter === "all" ? undefined : priorityFilter,
+        page: currentPage - 1,
+        size: ITEMS_PER_PAGE,
+        sortBy: "createdAt",
+        sortOrder: "desc"
+      };
+
+      console.log("🔍 Loading incidents with filters:", filters);
+
+      const result = await getFilteredIncidents(filters);
+
+      console.log("📦 Received incidents:", result);
+
+      setIncidents(result.data);
+      setTotalItems(result.total);
+
+      // toast.success(`Loaded ${result.data.length} incidents`);
+
+    } catch (err) {
+      console.error('❌ Error loading incidents:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load incidents';
+      setError(errorMessage);
+      setIncidents([]);
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [user, facilityFilter, statusFilter, priorityFilter, currentPage]);
+
+  // Load incidents when filters change
+  useEffect(() => {
+    loadIncidents();
+  }, [loadIncidents]);
+
+  // Set default facility filter based on user profile
   useEffect(() => {
     if (profile?.facilityName && facilityFilter === "all") {
-      const normalizedFacility = profile.facilityName.toLowerCase();
-      setFacilityFilter(normalizedFacility);
+      setFacilityFilter(profile.facilityName.toLowerCase());
     }
   }, [profile, facilityFilter]);
 
-  // Enhanced fetchIncidents using the service with proper token management
-  const fetchIncidents = useCallback(async () => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    dispatch({ type: 'SET_ERROR', payload: null });
- 
-    try {
-      if (!user) {
-        throw new Error('Authentication required. Please log in.');
-      }
+  const handleRefresh = () => {
+    setCurrentPage(1);
+    loadIncidents();
+  };
 
-      const idToken = await user.getIdToken();
-      sessionStorage.setItem("idToken", idToken);
-   
-      const filters: IncidentFilters = {
-        page: currentPage,
-        size: pageSize,
-      };
+  const handleFilterChange = (filterType: string, value: string) => {
+    setCurrentPage(1);
 
-      if (facilityFilter !== "all") {
-        filters.facility = facilityFilter;
-      }
-      if (statusFilter !== "all") {
-        filters.status = statusFilter;
-      }
-      if (priorityFilter !== "all") {
-        filters.priority = priorityFilter;
-      }
-   
-      const response = await getFilteredIncidents(filters);
-   
-      dispatch({ type: 'SET_INCIDENTS', payload: response.data });
-      setTotalItems(response.total);
-   
-    } catch (err) {
-      let errorMessage = 'Failed to load incidents.';
-   
-      if (err instanceof Error) {
-        errorMessage = err.message;
-      }
-   
-      dispatch({ type: 'SET_ERROR', payload: errorMessage });
-      dispatch({ type: 'SET_INCIDENTS', payload: [] });
+    switch (filterType) {
+      case 'facility':
+        setFacilityFilter(value);
+        break;
+      case 'status':
+        setStatusFilter(value);
+        break;
+      case 'priority':
+        setPriorityFilter(value);
+        break;
     }
-  }, [facilityFilter, statusFilter, priorityFilter, currentPage, pageSize, dispatch, user]);
-
-  // Only fetch incidents when user is authenticated
-  useEffect(() => {
-    if (user) {
-      fetchIncidents();
-    }
-  }, [fetchIncidents, user]);
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [facilityFilter, statusFilter, priorityFilter]);
+  };
 
   const clearFilters = () => {
-    setSearchTerm("");
+    setFacilityFilter("all");
     setStatusFilter("all");
     setPriorityFilter("all");
-    setFacilityFilter("all");
-    setCurrentPage(0);
-    dispatch({ type: 'SET_ERROR', payload: null });
+    setSearchTerm("");
+    setCurrentPage(1);
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
+  const hasActiveFilters = facilityFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" || searchTerm.trim() !== "";
 
-  const retryFetch = () => {
-    dispatch({ type: 'SET_ERROR', payload: null });
-    if (user) {
-      fetchIncidents();
-    }
-  };
-
-  // Client-side search filtering (applied after server-side filtering)
-  const filteredIncidents = state.incidents.filter((incident) => {
+  // Client-side search filtering
+  const filteredIncidents = incidents.filter((incident) => {
     if (!searchTerm) return true;
-   
+
     const searchLower = searchTerm.toLowerCase();
     return (
       incident.title.toLowerCase().includes(searchLower) ||
@@ -193,21 +196,17 @@ export function IncidentList() {
 
   // Calculate summary statistics
   const summaryStats = {
-    total: state.incidents.length,
-    new: state.incidents.filter((i) => i.status === "new").length,
-    active: state.incidents.filter((i) =>
+    total: incidents.length,
+    new: incidents.filter((i) => i.status === "new").length,
+    active: incidents.filter((i) =>
       ["acknowledged", "in-progress"].includes(i.status)
     ).length,
-    overdue: state.incidents.filter((i) =>
-      new Date() > new Date(i.slaDeadline) &&
+    overdue: incidents.filter((i) =>
+      i.slaDeadline && new Date() > i.slaDeadline &&
       !["resolved", "closed"].includes(i.status)
     ).length
   };
 
-  const hasActiveFilters = searchTerm || statusFilter !== "all" ||
-                          priorityFilter !== "all" || facilityFilter !== "all";
-
-  // Show authentication message if user is not logged in
   if (!user) {
     return (
       <div className="p-6">
@@ -228,7 +227,7 @@ export function IncidentList() {
 
   return (
     <div className="p-6">
-      {/* Dynamic Header */}
+      {/* ✅ RESTORED: Original glass theme header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold gradient-text">
@@ -253,9 +252,9 @@ export function IncidentList() {
       </div>
 
       {/* Error Message */}
-      {error && <ErrorMessage error={error} onRetry={retryFetch} />}
+      {error && <ErrorMessage error={error} onRetry={handleRefresh} />}
 
-      {/* Filters */}
+      {/* ✅ RESTORED: Original glass theme filters */}
       <div className="glass-card p-4 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
           {/* Search */}
@@ -275,7 +274,7 @@ export function IncidentList() {
             <Filter className="w-4 h-4 text-slate-400" />
             <select
               value={facilityFilter}
-              onChange={(e) => setFacilityFilter(e.target.value)}
+              onChange={(e) => handleFilterChange('facility', e.target.value)}
               className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
             >
               <option value="all">All Facilities</option>
@@ -287,7 +286,7 @@ export function IncidentList() {
           {/* Status Filter */}
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
             className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
           >
             <option value="all">All Status</option>
@@ -301,7 +300,7 @@ export function IncidentList() {
           {/* Priority Filter */}
           <select
             value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
+            onChange={(e) => handleFilterChange('priority', e.target.value)}
             className="bg-white/5 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
           >
             <option value="all">All Priority</option>
@@ -311,9 +310,27 @@ export function IncidentList() {
             <option value="low">Low</option>
           </select>
         </div>
+
+        {/* Active Filters Display */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {facilityFilter !== "all" && (
+              <Badge variant="blue">Facility: {facilityFilter}</Badge>
+            )}
+            {statusFilter !== "all" && (
+              <Badge variant="yellow">Status: {statusFilter}</Badge>
+            )}
+            {priorityFilter !== "all" && (
+              <Badge variant="red">Priority: {priorityFilter}</Badge>
+            )}
+            {searchTerm && (
+              <Badge variant="green">Search: {searchTerm}</Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Summary & Filter Reset */}
+      {/* ✅ RESTORED: Summary & Filter Reset */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <span className="text-sm text-slate-400">
@@ -352,7 +369,10 @@ export function IncidentList() {
         <div className="space-y-4">
           {filteredIncidents.length > 0 ? (
             filteredIncidents.map((incident) => (
-              <IncidentCard key={incident.id} incident={incident} />
+              <IncidentCard
+                key={incident.id}
+                incident={incident}
+              />
             ))
           ) : (
             <div className="text-center py-12 glass-card rounded-xl">
@@ -390,8 +410,8 @@ export function IncidentList() {
         <Pagination
           currentPage={currentPage}
           totalItems={totalItems}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
+          pageSize={ITEMS_PER_PAGE}
+          onPageChange={setCurrentPage}
         />
       )}
 
@@ -402,4 +422,4 @@ export function IncidentList() {
       />
     </div>
   );
-}
+};

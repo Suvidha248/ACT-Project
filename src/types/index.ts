@@ -15,6 +15,48 @@ export type AlertType =
   | "inventory"
   | "safety";
 
+// notification types 
+export type NotificationType = 
+  | "incident" 
+  | "incident_assigned"
+  | "incident_created"
+  | "incident_updated"
+  | "incident_resolved"
+  | "incident_escalated"
+  | "incident_acknowledged"
+  | "emergency_broadcast"
+  | "bulk_operation"
+  | "alert" 
+  | "update" 
+  | "system";
+  
+export type NotificationSeverity = "low" | "medium" | "high" | "critical";
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  facility: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  timestamp: Date;
+  isRead: boolean;
+  incidentId?: string;
+  alertId?: string;
+  actionUrl?: string;
+  recipients: string[];
+  createdBy?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface NotificationState {
+  notifications: Notification[];
+  unreadCount: number;
+  isLoading: boolean;
+  error?: string;
+}
+
+// Extend your existing interfaces if needed
 export interface User {
   id: string;
   fullName: string;
@@ -42,6 +84,14 @@ export interface User {
   updatedAtAsTimestamp: {
     seconds: number;
     nanos: number;
+  };
+  // Add notification preferences if needed
+  notificationPreferences?: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+    incidentTypes: AlertType[];
+    severityLevels: NotificationSeverity[];
   };
 }
 
@@ -97,8 +147,11 @@ export interface Incident {
   closedAt?: Date;
   notes: Note[];
   escalationLevel: number;
-  slaDeadline: Date;
+  slaDeadline?: Date;
   additionalContext?: string;
+  // Add notification tracking if needed
+  lastNotificationSent?: Date;
+  notificationsSent?: number;
 }
 
 export interface IncidentStats {
@@ -119,4 +172,31 @@ export interface Alert {
   notification: string[];
   role?: string;
   fullName?: string;
+  // Add notification tracking for alerts too
+  facility?: string;
+  lastNotificationSent?: Date;
+  notificationsSent?: number;
+}
+
+// Helper types for notification creation
+export interface CreateNotificationRequest {
+  title: string;
+  message: string;
+  type: NotificationType;
+  facility: string;
+  severity: NotificationSeverity;
+  incidentId?: string;
+  alertId?: string;
+  actionUrl?: string;
+  recipients?: string[]; // If not provided, will notify all facility users
+  metadata?: Record<string, unknown>;
+}
+
+export interface NotificationFilter {
+  facility?: string;
+  type?: NotificationType;
+  severity?: NotificationSeverity;
+  isRead?: boolean;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
