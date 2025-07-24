@@ -647,24 +647,29 @@ export const assignIncident = async (id: string, userId: string): Promise<void> 
     if (!userId?.trim()) {
       throw new Error("User ID is required");
     }
-    
-    const user = getCurrentUserFromStorage();
+
     const payload = {
-      assignedTo: {
-        id: userId,
-        name: user.fullName
-      }
+      userId,                        // ← required by your DTO
+      // assignmentNote: "foo",     // ← optional
+      // priority: "high"           // ← optional
     };
-    
-    debugLog("Assigning incident:", { id, userId, payload });
-    
+
+    debugLog("Assigning incident:", { id, payload });
+
     await axios.put(
       `${API_BASE_URL}/incidents/${id}/assign`,
       payload,
-      { headers: getAuthHeader(), timeout: API_TIMEOUT }
+      {
+        headers: {
+          ...getAuthHeader(),
+          "Content-Type": "application/json"
+        },
+        timeout: API_TIMEOUT
+      }
     );
   });
 };
+
 
 export const addNoteToIncident = async (
   incidentId: string,

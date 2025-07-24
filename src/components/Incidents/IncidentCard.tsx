@@ -1,5 +1,4 @@
-import { format, formatDistanceToNow } from "date-fns";
-
+import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -107,8 +106,12 @@ export function IncidentCard({ incident }: IncidentCardProps) {
     }
   };
 
- const isOverdue = incident.slaDeadline && new Date() > incident.slaDeadline && !['resolved', 'closed'].includes(incident.status);
+const isOverdue = incident.slaDeadline 
+  ? new Date() > new Date(incident.slaDeadline) && !["resolved", "closed"].includes(incident.status)
+  : false;
+
   const AlertIcon = getAlertTypeIcon(incident.alertType);
+
 
   return (
     <Link to={`/incidents/${incident.id}`}>
@@ -210,7 +213,7 @@ export function IncidentCard({ incident }: IncidentCardProps) {
           <div className="flex items-center space-x-2">
             <User className="w-4 h-4 text-teal-400" />
             <span className="font-mono text-xs">
-              {incident.assignedTo?.fullName || 'Unassigned'}
+              {incident.assignedTo?.fullName || "Unassigned"}
             </span>
           </div>
 
@@ -227,7 +230,7 @@ export function IncidentCard({ incident }: IncidentCardProps) {
           <div className="flex items-center space-x-4 text-xs text-slate-500">
             {incident.assignedTo && (
               <span className="font-mono">
-                Assigned to: {incident.reportedBy?.fullName || 'Unknown'}
+                Assigned to: {incident.assignedTo?.fullName || 'Unassigned'}
               </span>
             )}
           </div>
@@ -237,8 +240,10 @@ export function IncidentCard({ incident }: IncidentCardProps) {
               isOverdue ? "text-red-400 font-semibold" : "text-slate-500"
             }`}
           >
-            SLA:{" "}
-            {incident.slaDeadline ? format(incident.slaDeadline, 'MMM d, HH:mm') : 'No deadline'}
+            SLA: {incident.slaDeadline 
+  ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
+  : 'No SLA'
+}
           </div>
         </div>
       </motion.div>

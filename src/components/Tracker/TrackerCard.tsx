@@ -1,25 +1,23 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Incident } from '../../types';
-import { Badge } from '../Shared/Badge';
 import { formatDistanceToNow } from 'date-fns';
-import { 
-  Clock, 
-  MapPin, 
-  User, 
+import { motion } from 'framer-motion';
+import {
   AlertTriangle,
   CheckCircle,
-  Play,
-  UserCheck,
-  XCircle,
-  TrendingUp,
+  Clock,
+  Droplets,
+  Eye,
+  MapPin,
   Package,
+  Play,
   Shield,
   Thermometer,
-  Droplets,
-  Eye
+  TrendingUp,
+  User,
+  UserCheck
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Incident } from '../../types';
+import { Badge } from '../Shared/Badge';
 
 interface TrackerCardProps {
   incident: Incident;
@@ -94,7 +92,10 @@ export function TrackerCard({ incident, index }: TrackerCardProps) {
 
   const steps = getStatusSteps();
   const currentStep = getCurrentStep();
-  const isOverdue = new Date() > incident.slaDeadline && !['resolved', 'closed'].includes(incident.status);
+  const isOverdue = incident.slaDeadline 
+  ? new Date() > new Date(incident.slaDeadline) && !['resolved', 'closed'].includes(incident.status)
+  : false;
+
   const AlertIcon = getAlertTypeIcon(incident.alertType);
 
   return (
@@ -236,7 +237,7 @@ export function TrackerCard({ incident, index }: TrackerCardProps) {
         <div className="flex items-center space-x-2">
           <User className="w-4 h-4 text-teal-400" />
           <span className="text-slate-300 font-mono text-xs">
-            {incident.assignedTo?.name || 'Unassigned'}
+            {incident.assignedTo?.fullName || 'Unassigned'}
           </span>
         </div>
         
@@ -245,7 +246,11 @@ export function TrackerCard({ incident, index }: TrackerCardProps) {
           <span className={`font-mono text-xs ${
             isOverdue ? 'text-red-400 font-semibold' : 'text-slate-300'
           }`}>
-            SLA: {formatDistanceToNow(incident.slaDeadline, { addSuffix: true })}
+            SLA:{' '}
+{incident.slaDeadline
+  ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
+  : 'N/A'}
+
           </span>
         </div>
       </div>

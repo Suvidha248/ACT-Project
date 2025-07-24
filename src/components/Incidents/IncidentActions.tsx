@@ -118,6 +118,7 @@ export function IncidentActions({ incident }: IncidentActionsProps) {
   isOpen={showAssignModal}
   onClose={() => setShowAssignModal(false)}
   title="Assign Incident"
+  className="bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl"
 >
   <div className="space-y-4">
     <select
