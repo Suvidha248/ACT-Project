@@ -3,8 +3,10 @@ import { doc, getDoc } from "firebase/firestore";
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { auth, db } from "../firebase";
@@ -26,6 +28,10 @@ interface UserProfile {
 interface AuthContextType {
   user: FirebaseUser | null;
   profile: UserProfile | null;
+  loading: boolean;
+  initialized: boolean;
+  error: string | null;
+  refetchProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,36 +45,89 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);          // ✅ Add loading state
+  const [initialized, setInitialized] = useState(false); // ✅ Add initialized state
+  const [error, setError] = useState<string | null>(null); // ✅ Add error state
+
+  const normalizeRole = (role: string): string => {
+    if (role === "System Admin") return "Admin";
+    if (role === "Team Leader") return "Leader";
+    return role;
+  };
+
+  const fetchUserProfile = useCallback(async (firebaseUser: FirebaseUser) => {
+    try {
+      setError(null);
+      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data() as UserProfile;
+        console.log("userData", userData);
+        
+        // Normalize roles
+        userData.role = normalizeRole(userData.role);
+        
+        setProfile(userData);
+      } else {
+        setProfile(null);
+        setError("User profile not found");
+      }
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      setError("Failed to fetch user profile");
+      setProfile(null);
+    }
+  }, []);
+
+  const refetchProfile = useCallback(async () => {
+    if (user) {
+      setLoading(true);
+      await fetchUserProfile(user);
+      setLoading(false);
+    }
+  }, [user, fetchUserProfile]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        console.log("firebaseUser", firebaseUser);
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data() as UserProfile;
-          console.log("userData", userData);
-          // 🔁 Normalize roles here
-          if (userData.role === "System Admin") {
-            userData.role = "Admin";
-          } else if (userData.role === "Team Leader") {
-            userData.role = "Leader";
-          }
+    let isMounted = true;
 
-          setProfile(userData);
-        } else {
-          setProfile(null);
-        }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return;
+
+      console.log("firebaseUser", firebaseUser);
+      setUser(firebaseUser);
+      setError(null);
+
+      if (firebaseUser) {
+        setLoading(true);
+        await fetchUserProfile(firebaseUser);
       } else {
         setProfile(null);
       }
+
+      if (isMounted) {
+        setLoading(false);
+        setInitialized(true);
+      }
     });
-    return unsubscribe;
-  }, []);
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, [fetchUserProfile]);
+
+  // ✅ Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    user,
+    profile,
+    loading,
+    initialized,
+    error,
+    refetchProfile,
+  }), [user, profile, loading, initialized, error, refetchProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

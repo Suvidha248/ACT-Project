@@ -1,17 +1,16 @@
-import React from 'react';
 import { motion } from 'framer-motion';
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Shield,
+  TrendingUp,
+  XCircle
+} from 'lucide-react';
 import { useIncidents } from '../../context/IncidentContext';
 import { StatCard } from './StatCard';
-import { 
-  AlertTriangle, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle,
-  TrendingUp,
-  Shield,
-  Activity
-} from 'lucide-react';
 
 export function IncidentOverview() {
   const { state } = useIncidents();
