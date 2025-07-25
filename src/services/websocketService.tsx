@@ -1,5 +1,5 @@
 import { Client, IMessage } from "@stomp/stompjs";
-import { ChatMessage, NotificationMessage } from "../types";
+import { ChatMessage } from "../types";
 
 let stompClient: Client | null = null;
 
@@ -64,55 +64,6 @@ export const sendWebSocketMessage = (
     });
   } else {
     console.warn("❌ WebSocket not connected. Message not sent.");
-  }
-};
-
-/**
- * Connect to notifications topic based on userId
- */
-export const connectNotificationSocket = (
-  userId: string,
-  onMessage: (msg: NotificationMessage) => void
-): void => {
-  if (!stompClient) {
-    stompClient = new Client({
-      brokerURL: "ws://localhost:8080/ws",
-      reconnectDelay: 5000,
-
-      onConnect: () => {
-        console.log("🔔 Notification WebSocket connected");
-
-        stompClient?.subscribe(
-          `/topic/notifications/${userId}`,
-          (message: IMessage) => {
-            try {
-              const body: NotificationMessage = JSON.parse(message.body);
-              onMessage(body);
-            } catch (error) {
-              console.error("❌ Failed to parse notification message:", error);
-            }
-          }
-        );
-      },
-
-      onStompError: (frame) => {
-        console.error(
-          "❌ STOMP error (notifications):",
-          frame.headers["message"]
-        );
-        console.error("❌ Details:", frame.body);
-      },
-
-      onWebSocketError: (event) => {
-        console.error("❌ WebSocket error (notifications):", event);
-      },
-
-      onDisconnect: () => {
-        console.warn("⚠️ Notification WebSocket disconnected");
-      },
-    });
-
-    stompClient.activate();
   }
 };
 

@@ -15,6 +15,8 @@ import UsersPage from "./pages/UsersPage";
 import UploadUsers from "./pages/UploadUsers";
 import AdminPanel from "./components/AdminPanel/AdminPanel";
 import { ChatProvider } from "./context/ChatContext";
+import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 
 const Unauthorized = () => (
   <div className="p-6">
@@ -66,14 +68,27 @@ function App() {
                   />
 
                   <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute
+                        allowedRoles={[
+                          "Admin",
+                          "Leader",
+                          "Technician",
+                          "Supervisor",
+                          "User",
+                        ]}
+                      >
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
                     path="/settings"
                     element={
                       <ProtectedRoute allowedRoles={["Admin", "Leader"]}>
-                        <div className="p-6">
-                          <h2 className="text-2xl font-bold gradient-text">
-                            Settings – Coming Soon
-                          </h2>
-                        </div>
+                        <SettingsPage />
                       </ProtectedRoute>
                     }
                   />

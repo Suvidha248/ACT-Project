@@ -47,22 +47,28 @@ const navigation = [
     color: "from-blue-500 to-cyan-500",
   },
   {
+    name: "Users",
+    href: "/users",
+    icon: Users,
+    color: "from-green-500 to-lime-500",
+  },
+  {
     name: "Knowledge Base",
     href: "/docs",
     icon: FileText,
     color: "from-slate-500 to-gray-500",
   },
   {
+    name: "Profile",
+    href: "/profile",
+    icon: Cpu,
+    color: "from-orange-500 to-yellow-400",
+  },
+  {
     name: "Settings",
     href: "/settings",
     icon: Settings,
     color: "from-gray-500 to-slate-500",
-  },
-  {
-    name: "Users",
-    href: "/users",
-    icon: Users,
-    color: "from-green-500 to-lime-500",
   },
 ];
 

@@ -46,25 +46,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(firebaseUser);
 
       if (firebaseUser) {
-        console.log("firebaseUser", firebaseUser);
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
 
-        if (userDoc.exists()) {
-          const userData = {
-            ...(userDoc.data() as UserProfile),
-            id: firebaseUser.uid, // ✅ Assign id from Firestore UID
-          };
+          if (userDoc.exists()) {
+            const userData = {
+              ...(userDoc.data() as UserProfile),
+              id: firebaseUser.uid,
+            };
 
-          // 🔁 Normalize roles
-          if (userData.role === "System Admin") {
-            userData.role = "Admin";
-          } else if (userData.role === "Team Leader") {
-            userData.role = "Leader";
+            if (userData.role === "System Admin") userData.role = "Admin";
+            else if (userData.role === "Team Leader") userData.role = "Leader";
+
+            setProfile(userData);
+          } else {
+            console.warn("❗ User document not found");
+            setProfile(null);
           }
-
-          console.log("userData", userData);
-          setProfile(userData);
-        } else {
+        } catch (error) {
+          console.error("🔥 Firestore getDoc failed", error);
           setProfile(null);
         }
       } else {

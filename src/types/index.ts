@@ -88,11 +88,12 @@ export interface ChatMessage {
   participants?: string[];
 }
 
-export type NotificationMessage = {
-  id: number;
-  message: string;
-  read: boolean;
-  type: string;
-  role: string;
-  timestamp: string;
-};
+export interface UserData {
+  fullName: string;
+  phoneNumber?: string;
+  department?: string;
+  role?: string;
+  remoteWork?: boolean;
+  quietMode?: boolean;
+  notificationsEnabled?: boolean;
+}
