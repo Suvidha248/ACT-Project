@@ -1,21 +1,20 @@
-import React from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Incident } from "../../types";
-import { Badge } from "../Shared/Badge";
 import { formatDistanceToNow } from "date-fns";
+import { motion } from "framer-motion";
 import {
-  Clock,
-  MapPin,
-  User,
   AlertTriangle,
+  Clock,
+  Droplets,
+  MapPin,
   MessageSquare,
-  TrendingUp,
   Package,
   Shield,
   Thermometer,
-  Droplets,
+  TrendingUp,
+  User,
 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Incident } from "../../types";
+import { Badge } from "../Shared/Badge";
 
 interface IncidentCardProps {
   incident: Incident;
@@ -107,10 +106,12 @@ export function IncidentCard({ incident }: IncidentCardProps) {
     }
   };
 
-  const isOverdue =
-    new Date() > incident.slaDeadline &&
-    !["resolved", "closed"].includes(incident.status);
+const isOverdue = incident.slaDeadline 
+  ? new Date() > new Date(incident.slaDeadline) && !["resolved", "closed"].includes(incident.status)
+  : false;
+
   const AlertIcon = getAlertTypeIcon(incident.alertType);
+
 
   return (
     <Link to={`/incidents/${incident.id}`}>
@@ -212,7 +213,7 @@ export function IncidentCard({ incident }: IncidentCardProps) {
           <div className="flex items-center space-x-2">
             <User className="w-4 h-4 text-teal-400" />
             <span className="font-mono text-xs">
-              {incident.assignedTo?.name || "Unassigned"}
+              {incident.assignedTo?.fullName || "Unassigned"}
             </span>
           </div>
 
@@ -229,7 +230,7 @@ export function IncidentCard({ incident }: IncidentCardProps) {
           <div className="flex items-center space-x-4 text-xs text-slate-500">
             {incident.assignedTo && (
               <span className="font-mono">
-                Assigned to: {incident.assignedTo.name}
+                Assigned to: {incident.assignedTo?.fullName || 'Unassigned'}
               </span>
             )}
           </div>
@@ -239,8 +240,10 @@ export function IncidentCard({ incident }: IncidentCardProps) {
               isOverdue ? "text-red-400 font-semibold" : "text-slate-500"
             }`}
           >
-            SLA:{" "}
-            {formatDistanceToNow(incident.slaDeadline, { addSuffix: true })}
+            SLA: {incident.slaDeadline 
+  ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
+  : 'No SLA'
+}
           </div>
         </div>
       </motion.div>

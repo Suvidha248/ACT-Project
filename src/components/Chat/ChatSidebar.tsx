@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useChat } from "../../context/ChatContext";
-import { getAllUsers } from "../../services/userService";
+import { fetchUsers } from "../../services/userService";
 import { User } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import { User as UserIcon, Search } from "lucide-react";
@@ -28,9 +28,9 @@ const ChatSidebar: React.FC = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const data = await getAllUsers();
+        const data = await fetchUsers();
         const filtered = data.filter(
-          (u) => u?.id && u.name && u.id !== profile?.uid
+          (u) => u?.id && u.fullName && u.id !== profile?.uid
         );
         setUsers(filtered);
       } catch (error) {
@@ -112,7 +112,7 @@ const ChatSidebar: React.FC = () => {
   ]);
 
   const filteredUsers = users.filter((user) =>
-    user.name.toLowerCase().includes(search.toLowerCase())
+    user.fullName.toLowerCase().includes(search.toLowerCase())
   );
 
   const unreadTotal = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
@@ -178,7 +178,7 @@ const ChatSidebar: React.FC = () => {
                 >
                   <UserIcon className="w-4 h-4 text-teal-400" />
                   <div className="flex flex-col">
-                    <span className="font-mono text-xs">{user.name}</span>
+                    <span className="font-mono text-xs">{user.fullName}</span>
                     <span className="text-[10px] text-slate-400 font-mono truncate max-w-[180px]">
                       {lastMsg}
                     </span>

@@ -1,154 +1,128 @@
 import { User } from "../types";
 
-const API_URL = "http://localhost:8080/api/admin/users";
+// Base URL configuration
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
-type APIUser = {
-  id: number;
-  fullName: string;
-  email: string;
-  department: string;
-  role: string;
-  group: string;
+// Enhanced auth headers function
+const getAuthHeaders = (): Record<string, string> => {
+  const token = sessionStorage.getItem("idToken");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
 };
 
-/**
- * Fetch all users from the backend.
- */
 export const fetchUsers = async (): Promise<User[]> => {
-  const token = sessionStorage.getItem("idToken") || "";
+  try {
+    console.log("🔄 Fetching users...");
+    console.log("🔗 API URL:", `${API_BASE_URL}/admin/users`);
 
-  const response = await fetch(API_URL, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    const response = await fetch(`${API_BASE_URL}/admin/users`, {
+      headers: getAuthHeaders(),
+    });
 
-  // 🔴 Handle 401 Unauthorized
-  if (response.status === 401) {
-    console.error("Unauthorized. Redirecting to login.");
-    window.location.href = "/login"; // Update this route if your login page is different
-    throw new Error("Unauthorized. Please log in again.");
+    console.log("📊 Response status:", response.status);
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error(
+          "Access denied. You do not have permission to view users."
+        );
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const users: User[] = await response.json();
+    console.log("✅ Users fetched successfully:", users.length);
+    return users;
+  } catch (error) {
+    console.error("❌ Error fetching users:", error);
+    throw error;
   }
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch users");
-  }
-
-  const apiUsers: APIUser[] = await response.json();
-
-  const users: User[] = apiUsers.map((apiUser) => ({
-    id: apiUser.id.toString(),
-    name: apiUser.fullName,
-    email: apiUser.email,
-    department: apiUser.department,
-    role: apiUser.role,
-    group: apiUser.group,
-  }));
-
-  return users;
 };
 
-/**
- * Get all users (alias for fetchUsers).
- * This is needed for IncidentContext.tsx compatibility.
- */
-export const getAllUsers = async (): Promise<User[]> => {
-  return fetchUsers();
+// Edit user with authentication and verification
+export const editUser = async (user: User): Promise<User> => {
+  try {
+    console.log("🔄 Updating user:", user.id);
+    console.log("🔗 API URL:", `${API_BASE_URL}/admin/users/${user.id}`);
+
+    const response = await fetch(`${API_BASE_URL}/admin/users/${user.id}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(user),
+    });
+
+    console.log("📊 Response status:", response.status);
+    console.log("🌐 Response URL:", response.url);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Update failed:", response.status, errorText);
+
+      if (response.status === 403) {
+        throw new Error(
+          "Access denied. You do not have permission to edit this user."
+        );
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const updatedUser = await response.json();
+    console.log("✅ User updated successfully:", updatedUser);
+    return updatedUser;
+  } catch (error) {
+    console.error("❌ Error updating user:", error);
+    throw error;
+  }
 };
 
-/**
- * Fetch available user roles.
- */
+// Delete user with authentication
+export const deleteUser = async (userId: string): Promise<void> => {
+  try {
+    console.log("🔄 Deleting user:", userId);
+
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      if (response.status === 403) {
+        throw new Error(
+          "Access denied. You do not have permission to delete this user."
+        );
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    console.log("✅ User deleted successfully");
+  } catch (error) {
+    console.error("❌ Error deleting user:", error);
+    throw error;
+  }
+};
+
+// Fetch roles with authentication
 export const fetchRoles = async (): Promise<string[]> => {
-  const token = sessionStorage.getItem("idToken") || "";
+  try {
+    const response = await fetch(`${API_BASE_URL}/admin/users/roles`, {
+      headers: getAuthHeaders(),
+    });
 
-  const response = await fetch(`${API_URL}/roles`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-  // 🔴 Handle 401 Unauthorized
-  if (response.status === 401) {
-    console.error("Unauthorized. Redirecting to login.");
-    window.location.href = "/login";
-    throw new Error("Unauthorized. Please log in again.");
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch roles");
-  }
-
-  const roles: string[] = await response.json();
-  return roles;
-};
-
-/**
- * Edit/update user information.
- */
-export const editUser = async (updatedUser: User): Promise<User> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const payload = {
-    fullName: updatedUser.name,
-    email: updatedUser.email,
-    department: updatedUser.department,
-    role: updatedUser.role,
-  };
-
-  const response = await fetch(`${API_URL}/${updatedUser.id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (response.status === 401) {
-    window.location.href = "/login";
-    throw new Error("Unauthorized");
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to update user");
-  }
-
-  const apiUser: APIUser = await response.json();
-
-  return {
-    id: apiUser.id.toString(),
-    name: apiUser.fullName,
-    email: apiUser.email,
-    department: apiUser.department,
-    role: apiUser.role,
-  };
-};
-
-/**
- * Delete a user by ID.
- */
-export const deleteUser = async (id: string): Promise<void> => {
-  const token = sessionStorage.getItem("idToken") || "";
-
-  const response = await fetch(`${API_URL}/${id}`, {
-    method: "DELETE",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  // 🔴 Handle 401 Unauthorized
-  if (response.status === 401) {
-    console.error("Unauthorized. Redirecting to login.");
-    window.location.href = "/login";
-    throw new Error("Unauthorized. Please log in again.");
-  }
-
-  if (!response.ok) {
-    throw new Error("Failed to delete user");
+    return response.json();
+  } catch (error) {
+    console.error("❌ Error fetching roles:", error);
+    throw error;
   }
 };

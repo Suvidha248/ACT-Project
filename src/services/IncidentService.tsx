@@ -1,14 +1,18 @@
 import axios from "axios";
 import {
-  Incident,
-  IncidentStatus,
-  IncidentPriority,
   AlertType,
+  Incident,
+  IncidentPriority,
+  IncidentStatus,
   Note,
+  User,
 } from "../types";
 
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '5000');
+const ENABLE_DEBUG = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true';
 
+// ✅ FIXED: Updated to match actual API response structure from screenshots
 type APIIncident = {
   id: string;
   title: string;
@@ -20,26 +24,170 @@ type APIIncident = {
   slaDeadline?: string;
   alertType?: string;
   facility?: string;
+  location?: string;
+  escalationLevel?: number;
+  acknowledgedAt?: string;
+  resolvedAt?: string;
+  closedAt?: string;
   assignedTo?: {
-    id: string;
-    name: string;
+    id?: string;
+    fullName?: string;
+    name?: string; // ✅ API uses 'name' field
     email?: string;
-    role: string;
-    department: string;
+    role?: string;
+    department?: string;
+    group?: string;
+    assignedAt?: {
+      seconds?: number;
+      nanos?: number;
+    };
   };
   reportedBy?: {
-    id: string;
-    name: string;
+    id?: string;
+    fullName?: string;
+    name?: string; // ✅ API uses 'name' field
     email?: string;
-    role: string;
+    role?: string;
+    department?: string;
+    group?: string;
+  };
+  notes?: APINote[];
+};
+
+interface UserStorageData {
+  id: string;
+  fullName: string;
+  role: string;
+  email: string;
+  department?: string;
+  group?: string;
+  facilityName?: string;
+  uid?: string;
+  displayName?: string;
+}
+
+type APINote = {
+  id: string;
+  content: string;
+  author: {
+    id: string;
+    fullName: string;
+    email?: string;
+    role?: string;
+  };
+  createdAt: string;
+  type?: string;
+  isInternal?: boolean;
+};
+
+export interface IncidentFilters {
+  facility?: string;
+  status?: string;
+  priority?: string;
+  assignedTo?: string;
+  reportedBy?: string;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface FilteredIncidentResponse {
+  data: Incident[];
+  total: number;
+  page?: number;
+  size?: number;
+}
+
+interface AxiosErrorType {
+  response?: {
+    status: number;
+    data?: { message?: string };
+  };
+  message: string;
+  request?: unknown;
+  config?: {
+    url?: string;
+    method?: string;
+  };
+}
+
+// Helper function to convert Date to Firestore timestamp format
+function dateToFirestoreTimestamp(date: Date): { seconds: number; nanos: number } {
+  const seconds = Math.floor(date.getTime() / 1000);
+  const nanos = (date.getTime() % 1000) * 1000000;
+  return { seconds, nanos };
+}
+
+const getAuthHeader = () => {
+  const token = sessionStorage.getItem("idToken");
+  if (!token) {
+    throw new Error("Authentication token not found. Please log in again.");
+  }
+  return {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0"
   };
 };
 
-const getAuthHeader = () => ({
-  Authorization: `Bearer ${sessionStorage.getItem("idToken") || ""}`,
-});
+const debugLog = (message: string, data?: unknown) => {
+  if (ENABLE_DEBUG) {
+    console.log(`[ACT Debug] ${message}`, data);
+  }
+};
 
-// ✅ Define form data type
+export const getCurrentUserFromStorage = (): UserStorageData => {
+  try {
+    const sources = [
+      () => localStorage.getItem('currentUser'),
+      () => sessionStorage.getItem('currentUser'),
+      () => localStorage.getItem('user'),
+      () => sessionStorage.getItem('user')
+    ];
+
+    for (const getSource of sources) {
+      const stored = getSource();
+      if (stored) {
+        const user = JSON.parse(stored) as UserStorageData;
+        if (user && user.id) {
+          return {
+            id: user.id,
+            fullName: user.fullName || user.displayName || 'Unknown User',
+            role: user.role || 'User',
+            email: user.email || 'user@company.com',
+            department: user.department || 'General',
+            group: user.group || 'System',
+            facilityName: user.facilityName
+          };
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error parsing user from storage:', error);
+  }
+
+  return {
+    id: 'system',
+    fullName: 'System User',
+    role: 'User',
+    email: 'system@company.com',
+    department: 'General',
+    group: 'System',
+    facilityName: undefined
+  };
+};
+
+export const saveUserToStorage = (user: Partial<UserStorageData> & { uid?: string; facilityName?: string }): void => {
+  try {
+    localStorage.setItem('currentUser', JSON.stringify(user));
+  } catch (error) {
+    console.error('Error saving user to storage:', error);
+  }
+};
+
 export type IncidentFormData = {
   title: string;
   description: string;
@@ -49,204 +197,520 @@ export type IncidentFormData = {
   additionalDetails?: string;
 };
 
-// ✅ Helper mapper function with assignedTo & reportedBy mapping
-function mapApiIncident(api: APIIncident): Incident {
+// ✅ FIXED: Enhanced user creation function
+function createUserFromApi(
+  apiUser: { 
+    id?: string; 
+    fullName?: string; 
+    name?: string; // ✅ Handle 'name' field from API
+    email?: string; 
+    role?: string; 
+    department?: string; 
+    group?: string;
+  }, 
+  facility?: string
+): User {
+  const now = new Date();
+  
+  // Use name as fallback for fullName and vice versa
+  const userName = apiUser.fullName || apiUser.name || 'Unknown User';
+  const userId = apiUser.id || `unknown_${Date.now()}`;
+  
   return {
-    id: api.id,
-    title: api.title,
-    status: api.status as IncidentStatus,
-    priority: api.priority.toLowerCase() as IncidentPriority,
-    location: api.facility || "",
-    alertType: (api.alertType?.toLowerCase() as AlertType) || "equipment",
-    assignedTo: api.assignedTo
-      ? {
-          id: api.assignedTo.id,
-          name: api.assignedTo.name,
-          email: api.assignedTo.email || "no-email@example.com",
-          role: api.assignedTo.role,
-          department: api.assignedTo.department,
-        }
-      : undefined,
-    reportedBy: api.reportedBy
-      ? {
-          id: api.reportedBy.id,
-          name: api.reportedBy.name,
-          email: api.reportedBy.email || "system@example.com",
-          role: api.reportedBy.role,
-          department: "General",
-        }
-      : {
-          id: "system",
-          name: "System",
-          email: "system@example.com",
-          role: "admin",
-          department: "General",
-        },
-    createdAt: new Date(api.createdAt),
-    updatedAt: api.updatedAt
-      ? new Date(api.updatedAt)
-      : new Date(api.createdAt),
-    description: api.description || "No description provided",
-    slaDeadline: api.slaDeadline ? new Date(api.slaDeadline) : new Date(),
-    notes: [],
-    escalationLevel: 0,
-    acknowledgedAt: undefined,
-    resolvedAt: undefined,
-    closedAt: undefined,
+    id: userId,
+    fullName: userName,
+    username: userName.toLowerCase().replace(/\s+/g, ''),
+    email: apiUser.email || "no-email@example.com",
+    role: apiUser.role || 'User',
+    department: apiUser.department || "General",
+    group: apiUser.group || "General",
+    facilityName: facility || "",
+    isActive: true,
+    createdAt: dateToFirestoreTimestamp(now),
+    updatedAt: dateToFirestoreTimestamp(now),
+    displayName: userName,
+    uid: userId,
+    createdAtAsTimestamp: dateToFirestoreTimestamp(now),
+    updatedAtAsTimestamp: dateToFirestoreTimestamp(now),
   };
 }
 
-// ✅ Get all incidents
-export const getAllIncidents = async (): Promise<Incident[]> => {
-  const response = await axios.get<{ data: APIIncident[] }>(
-    `${API_BASE_URL}/incidents`,
-    {
-      headers: getAuthHeader(),
-    }
-  );
-  return response.data.data.map(mapApiIncident);
-};
+function createSystemUser(): User {
+  const now = new Date();
+  
+  return {
+    id: "system",
+    fullName: "System",
+    username: "system",
+    email: "system@example.com",
+    role: "admin",
+    department: "General",
+    group: "System",
+    facilityName: "",
+    isActive: true,
+    createdAt: dateToFirestoreTimestamp(now),
+    updatedAt: dateToFirestoreTimestamp(now),
+    displayName: "System",
+    uid: "system",
+    createdAtAsTimestamp: dateToFirestoreTimestamp(now),
+    updatedAtAsTimestamp: dateToFirestoreTimestamp(now),
+  };
+}
 
-// ✅ Get specific incident by ID
+// ✅ FIXED: Complete mapping function with comprehensive error handling
+function mapApiIncident(api: APIIncident): Incident {
+  // Helper function to safely convert strings to lowercase
+  const safeToLowerCase = (value: string | undefined | null): string => {
+    if (!value || typeof value !== 'string') {
+      console.warn('safeToLowerCase received invalid value:', value);
+      return '';
+    }
+    return value.toLowerCase();
+  };
+
+  // Helper function to safely parse dates
+  const parseDate = (dateString: string | undefined): Date | undefined => {
+    if (!dateString) return undefined;
+    try {
+      const date = new Date(dateString);
+      return isNaN(date.getTime()) ? undefined : date;
+    } catch {
+      return undefined;
+    }
+  };
+
+  console.log('🔄 Mapping API incident:', api);
+
+  // Validate required fields
+  if (!api.id) {
+    throw new Error('API incident missing required id field');
+  }
+
+  const result: Incident = {
+    id: api.id,
+    title: api.title || "Untitled Incident",
+    
+    // ✅ FIXED: Safe conversion with comprehensive fallbacks
+    status: (safeToLowerCase(api.status) as IncidentStatus) || "new",
+    priority: (safeToLowerCase(api.priority) as IncidentPriority) || "medium", 
+    
+    location: api.location || api.facility || "Unknown Location",
+    alertType: (safeToLowerCase(api.alertType) as AlertType) || "equipment",
+    
+    // ✅ FIXED: Enhanced user mapping with null checks
+    assignedTo: api.assignedTo ? createUserFromApi(api.assignedTo, api.facility || api.location) : undefined,
+    reportedBy: api.reportedBy ? createUserFromApi(api.reportedBy, api.facility || api.location) : createSystemUser(),
+    
+    // ✅ FIXED: Safe date parsing
+    createdAt: parseDate(api.createdAt) || new Date(),
+    updatedAt: parseDate(api.updatedAt) || parseDate(api.createdAt) || new Date(),
+    
+    description: api.description || "No description provided",
+    slaDeadline: parseDate(api.slaDeadline), // ✅ Optional field
+    notes: Array.isArray(api.notes) ? api.notes.map(mapApiNote) : [],
+    escalationLevel: typeof api.escalationLevel === 'number' ? api.escalationLevel : 0,
+    
+    // ✅ FIXED: Safe optional timestamp parsing
+    acknowledgedAt: parseDate(api.acknowledgedAt),
+    resolvedAt: parseDate(api.resolvedAt),
+    closedAt: parseDate(api.closedAt),
+  };
+
+  console.log('✅ Successfully mapped incident:', result);
+  return result;
+}
+
+function mapApiNote(apiNote: APINote): Note {
+  const defaultUser = getCurrentUserFromStorage();
+  return {
+    id: apiNote.id,
+    content: apiNote.content,
+    author: {
+      id: apiNote.author.id,
+      fullName: apiNote.author.fullName,
+      email: apiNote.author.email || "user@example.com",
+      role: apiNote.author.role || defaultUser.role || 'User'
+    },
+    createdAt: new Date(apiNote.createdAt),
+    type: (apiNote.type as Note['type']) || "user",
+    isInternal: apiNote.isInternal || false,
+  };
+}
+
+// Enhanced error handling
+async function handleApiCall<T>(apiCall: () => Promise<T>): Promise<T> {
+  try {
+    return await apiCall();
+  } catch (error: unknown) {
+    console.error('🚨 API Call Error:', error);
+    
+    if (
+      error &&
+      typeof error === 'object' &&
+      'response' in error &&
+      'request' in error &&
+      'config' in error
+    ) {
+      const axiosError = error as AxiosErrorType;
+      const status = axiosError.response?.status;
+      const errorData = axiosError.response?.data;
+      
+      debugLog('API Error Details:', {
+        status,
+        data: errorData,
+        url: axiosError.config?.url,
+        method: axiosError.config?.method
+      });
+      
+      if (status === 401) {
+        sessionStorage.removeItem("idToken");
+        throw new Error("Authentication expired. Please log in again.");
+      } else if (status === 403) {
+        throw new Error("Access denied. You don't have permission for this action.");
+      } else if (status === 404) {
+        throw new Error("Resource not found.");
+      } else if (status === 500) {
+        const serverMessage = errorData?.message || "Internal server error";
+        throw new Error(`Server error: ${serverMessage}`);
+      } else if (status && status >= 400) {
+        const errorMessage = errorData?.message || axiosError.message || "An error occurred.";
+        throw new Error(`Request failed (${status}): ${errorMessage}`);
+      } else {
+        const errorMessage = errorData?.message || axiosError.message || "An error occurred.";
+        throw new Error(errorMessage);
+      }
+    }
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error("An unexpected error occurred.");
+  }
+}
+
+// ✅ ENHANCED: getIncidentById with comprehensive error handling
 export const getIncidentById = async (id: string): Promise<Incident> => {
-  const response = await axios.get<APIIncident>(
-    `${API_BASE_URL}/incidents/${id}`,
-    {
-      headers: getAuthHeader(),
+  if (!id || !id.trim()) {
+    throw new Error("Incident ID is required");
+  }
+
+  return handleApiCall(async () => {
+    const url = `${API_BASE_URL}/incidents/${encodeURIComponent(id)}`;
+    debugLog("🔍 Fetching incident by ID:", { id, url });
+    
+    try {
+      const response = await axios.get<APIIncident>(
+        url,
+        {
+          headers: getAuthHeader(),
+          timeout: API_TIMEOUT,
+        }
+      );
+      
+      console.log("✅ Raw API Response:", JSON.stringify(response.data, null, 2));
+      
+      // Validate response structure
+      if (!response.data || typeof response.data !== 'object') {
+        throw new Error("Invalid response format from server");
+      }
+      
+      if (!response.data.id) {
+        throw new Error("Response missing required 'id' field");
+      }
+      
+      // Map the incident with error handling
+      try {
+        const mappedIncident = mapApiIncident(response.data);
+        console.log("✅ Successfully mapped incident:", mappedIncident);
+        return mappedIncident;
+      } catch (mappingError) {
+        console.error("❌ Error mapping incident:", mappingError);
+        console.error("❌ Raw API data that failed mapping:", JSON.stringify(response.data, null, 2));
+        
+        // Provide more specific error information
+        if (mappingError instanceof Error) {
+          throw new Error(`Failed to process incident data: ${mappingError.message}`);
+        } else {
+          throw new Error('Failed to process incident data: Unknown mapping error');
+        }
+      }
+      
+    } catch (axiosError: unknown) {
+      if (
+        axiosError &&
+        typeof axiosError === 'object' &&
+        'response' in axiosError
+      ) {
+        const errorResponse = axiosError as { response?: { status?: number; data?: unknown } };
+        if (errorResponse.response?.status === 500) {
+          debugLog("🚨 Server error when fetching incident:", {
+            id,
+            status: errorResponse.response.status,
+            data: errorResponse.response.data
+          });
+          throw new Error(`Server error while fetching incident. Please try again later.`);
+        }
+      }
+      throw axiosError;
     }
-  );
-  return mapApiIncident(response.data);
+  });
 };
 
-// ✅ Create new incident
+// Facility-only incident retrieval
+export const getFacilityIncidents = async (
+  facility: string,
+  additionalFilters: Omit<IncidentFilters, 'facility'> = {}
+): Promise<FilteredIncidentResponse> => {
+  if (!facility || facility === 'all') {
+    throw new Error('getFacilityIncidents requires a valid facility identifier');
+  }
+
+  return handleApiCall(async () => {
+    const params = new URLSearchParams();
+    params.append('facility', facility);
+    
+    Object.entries(additionalFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== 'all') {
+        params.append(key, value.toString());
+      }
+    });
+
+    const url = `${API_BASE_URL}/incidents?${params.toString()}`;
+    debugLog("🔗 Fetching facility incidents:", { facility, url });
+    
+    const response = await axios.get<{ data: APIIncident[]; total: number }>(
+      url,
+      {
+        headers: getAuthHeader(),
+        timeout: API_TIMEOUT
+      }
+    );
+
+    debugLog("📦 API Response:", response.data);
+    const apiIncidents = response.data.data || [];
+    const transformedIncidents = apiIncidents.map(mapApiIncident);
+
+    return {
+      data: transformedIncidents,
+      total: response.data.total || transformedIncidents.length,
+      page: additionalFilters.page,
+      size: additionalFilters.size,
+    };
+  });
+};
+
+// General filtering function (for backward compatibility)
+export const getFilteredIncidents = async (
+  filters: IncidentFilters = {}
+): Promise<FilteredIncidentResponse> => {
+  return handleApiCall(async () => {
+    const params = new URLSearchParams();
+    
+    if (filters.facility && filters.facility !== "all") {
+      params.append("facility", filters.facility);
+      debugLog(`Adding facility filter: ${filters.facility}`);
+    }
+    
+    Object.entries(filters).forEach(([key, value]) => {
+      if (key !== 'facility' && value !== undefined && value !== null && value !== "all") {
+        params.append(key, value.toString());
+      }
+    });
+
+    const url = `${API_BASE_URL}/incidents?${params.toString()}`;
+    debugLog("🔗 Fetching filtered incidents:", url);
+    
+    const response = await axios.get<{ data: APIIncident[]; total: number }>(
+      url,
+      {
+        headers: getAuthHeader(),
+        timeout: API_TIMEOUT
+      }
+    );
+
+    debugLog("📦 API Response:", response.data);
+    const apiIncidents = response.data.data || [];
+    const transformedIncidents = apiIncidents.map(mapApiIncident);
+
+    return {
+      data: transformedIncidents,
+      total: response.data.total || transformedIncidents.length,
+      page: filters.page,
+      size: filters.size,
+    };
+  });
+};
+
 export const createIncident = async (
   incidentData: IncidentFormData
 ): Promise<Incident> => {
-  const payload = {
-    title: incidentData.title,
-    description: incidentData.description,
-    facility: incidentData.location,
-    location: incidentData.location,
-    priority: incidentData.priority.toUpperCase(),
-    alertType: incidentData.alertType.toUpperCase(),
-    additionalContext: incidentData.additionalDetails || "",
-  };
-
-  const response = await axios.post<APIIncident>(
-    `${API_BASE_URL}/incidents`,
-    payload,
-    {
-      headers: {
-        ...getAuthHeader(),
-        "Content-Type": "application/json",
-      },
+  return handleApiCall(async () => {
+    if (!incidentData.title?.trim()) {
+      throw new Error("Title is required");
     }
-  );
-  return mapApiIncident(response.data);
+    if (!incidentData.description?.trim()) {
+      throw new Error("Description is required");
+    }
+    if (!incidentData.location?.trim()) {
+      throw new Error("Location is required");
+    }
+
+    const payload = {
+      title: incidentData.title.trim(),
+      description: incidentData.description.trim(),
+      facility: incidentData.location,
+      location: incidentData.location,
+      priority: incidentData.priority.toUpperCase(),
+      alertType: incidentData.alertType.toUpperCase(),
+      additionalContext: incidentData.additionalDetails?.trim() || "",
+    };
+
+    debugLog("Creating incident with payload:", payload);
+
+    const response = await axios.post<APIIncident>(
+      `${API_BASE_URL}/incidents`,
+      payload,
+      {
+        headers: getAuthHeader(),
+        timeout: API_TIMEOUT
+      }
+    );
+    return mapApiIncident(response.data);
+  });
 };
 
-// ✅ Update incident (PATCH/PUT)
 export const updateIncident = async (
   id: string,
-  data: Partial<IncidentFormData>
-): Promise<void> => {
-  // Validate required fields if needed
-  if (
-    !data.title ||
-    !data.description ||
-    !data.location ||
-    !data.priority ||
-    !data.alertType
-  ) {
-    throw new Error("All required fields must be provided");
-  }
+  updates: Partial<Incident>
+): Promise<Incident> => {
+  return handleApiCall(async () => {
+    const payload: Record<string, unknown> = {};
+    
+    if (updates.title !== undefined) {
+      if (!updates.title.trim()) {
+        throw new Error("Title cannot be empty");
+      }
+      payload.title = updates.title.trim();
+    }
 
-  const payload = {
-    title: data.title,
-    description: data.description,
-    facility: data.location,
-    location: data.location,
-    priority: data.priority.toUpperCase(),
-    alertType: data.alertType.toUpperCase(),
-    additionalContext: data.additionalDetails || "",
-  };
+    if (updates.description !== undefined) {
+      if (!updates.description.trim()) {
+        throw new Error("Description cannot be empty");
+      }
+      payload.description = updates.description.trim();
+    }
 
-  await axios.put(`${API_BASE_URL}/incidents/${id}`, payload, {
-    headers: {
-      ...getAuthHeader(),
-      "Content-Type": "application/json",
-    },
+    if (updates.location !== undefined) {
+      if (!updates.location.trim()) {
+        throw new Error("Location cannot be empty");
+      }
+      payload.facility = updates.location;
+      payload.location = updates.location;
+    }
+
+    if (updates.priority !== undefined) {
+      payload.priority = updates.priority.toUpperCase();
+    }
+
+    if (updates.alertType !== undefined) {
+      payload.alertType = updates.alertType.toUpperCase();
+    }
+
+    debugLog("Updating incident with payload:", { id, payload });
+
+    const response = await axios.put<APIIncident>(
+      `${API_BASE_URL}/incidents/${id}`,
+      payload,
+      {
+        headers: getAuthHeader(),
+        timeout: API_TIMEOUT
+      }
+    );
+    return mapApiIncident(response.data);
   });
 };
 
-// ✅ Update incident status
-export const updateIncidentStatus = async (
-  id: string,
-  status: IncidentStatus
-): Promise<void> => {
-  await axios.put(
-    `${API_BASE_URL}/incidents/${id}/status`,
-    { status },
-    {
-      headers: getAuthHeader(),
-    }
-  );
-};
-
-// ✅ Assign incident to a user
-export const assignIncident = async (
-  id: string,
-  userId: string
-): Promise<void> => {
-  await axios.put(
-    `${API_BASE_URL}/incidents/${id}/assign`,
-    { userId },
-    {
-      headers: getAuthHeader(),
-    }
-  );
-};
-
-// ✅ Delete incident
-export const deleteIncident = async (id: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/incidents/${id}`, {
-    headers: getAuthHeader(),
+export const updateIncidentStatus = async (id: string, status: IncidentStatus): Promise<void> => {
+  return handleApiCall(async () => {
+    debugLog("Updating incident status:", { id, status });
+    await axios.put(
+      `${API_BASE_URL}/incidents/${id}`,
+      { status: status.toUpperCase() },
+      { headers: getAuthHeader(), timeout: API_TIMEOUT }
+    );
   });
 };
 
-// ✅ Get facilities
-export const getFacilities = async (): Promise<string[]> => {
-  const response = await axios.get<string[]>(
-    `${API_BASE_URL}/incidents/facilities`,
-    {
-      headers: getAuthHeader(),
+export const assignIncident = async (id: string, userId: string): Promise<void> => {
+  return handleApiCall(async () => {
+    if (!userId?.trim()) {
+      throw new Error("User ID is required");
     }
-  );
-  return response.data;
+
+    const payload = {
+      userId,                        // ← required by your DTO
+      // assignmentNote: "foo",     // ← optional
+      // priority: "high"           // ← optional
+    };
+
+    debugLog("Assigning incident:", { id, payload });
+
+    await axios.put(
+      `${API_BASE_URL}/incidents/${id}/assign`,
+      payload,
+      {
+        headers: {
+          ...getAuthHeader(),
+          "Content-Type": "application/json"
+        },
+        timeout: API_TIMEOUT
+      }
+    );
+  });
 };
 
-// ✅ Add note to incident
+
 export const addNoteToIncident = async (
   incidentId: string,
-  note: Note
+  noteContent: string
 ): Promise<Note> => {
-  const response = await axios.post<Note>(
-    `${API_BASE_URL}/incidents/${incidentId}/notes`,
-    note,
-    {
-      headers: getAuthHeader(),
-    }
-  );
-  return response.data;
+  return handleApiCall(async () => {
+    debugLog('Adding note to incident', { incidentId, contentLength: noteContent.length });
+    const response = await axios.post<APINote>(
+      `${API_BASE_URL}/incidents/${incidentId}/notes`,
+      {
+        content: noteContent.trim(),
+        type: "user",
+        isInternal: false,
+      },
+      {
+        headers: getAuthHeader(),
+        timeout: API_TIMEOUT
+      }
+    );
+    debugLog('Note added successfully', response.data);
+    return mapApiNote(response.data);
+  });
 };
 
-// ✅ Escalate incident
 export const escalateIncident = async (id: string): Promise<void> => {
-  await axios.put(
-    `${API_BASE_URL}/incidents/${id}/escalate`,
-    {},
-    {
+  return handleApiCall(async () => {
+    debugLog("Escalating incident:", { id });
+    await axios.put(
+      `${API_BASE_URL}/incidents/${id}/escalate`,
+      { escalationReason: "Manual escalation requested" },
+      { headers: getAuthHeader(), timeout: API_TIMEOUT }
+    );
+  });
+};
+
+export const deleteIncident = async (id: string): Promise<void> => {
+  return handleApiCall(async () => {
+    debugLog("Deleting incident:", { id });
+    await axios.delete(`${API_BASE_URL}/incidents/${id}`, {
       headers: getAuthHeader(),
-    }
-  );
+      timeout: API_TIMEOUT
+    });
+  });
 };
