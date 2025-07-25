@@ -1,9 +1,8 @@
-import React from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { motion } from 'framer-motion';
+import { Activity, AlertTriangle, Bot, Brain, Clock, MapPin, Sparkles, User } from 'lucide-react';
 import { useIncidents } from '../../context/IncidentContext';
 import { Badge } from '../Shared/Badge';
-import { formatDistanceToNow } from 'date-fns';
-import { AlertTriangle, Clock, MapPin, Activity, Brain, User, Bot, Sparkles } from 'lucide-react';
 
 export function RecentAlerts() {
   const { state } = useIncidents();
@@ -180,7 +179,7 @@ export function RecentAlerts() {
                     <div className="flex items-center space-x-1">
                       <User className="w-3 h-3 text-cyan-400" />
                       <span className="text-teal-300 font-mono text-xs group-hover:text-teal-200">
-                        {incident.assignedTo.name}
+                        {incident.assignedTo.fullName}
                       </span>
                     </div>
                   )}

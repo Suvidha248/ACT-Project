@@ -1,6 +1,5 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Cpu, Database, Network, Thermometer, Zap, Truck, Package } from 'lucide-react';
+import { Activity, Cpu, Database, Network, Package, Thermometer, Truck, Zap } from 'lucide-react';
 
 export function SystemMetrics() {
   const facilities = [
@@ -67,7 +66,7 @@ export function SystemMetrics() {
             >
               <h4 className="text-lg font-semibold text-white mb-4 text-center">{facility.name}</h4>
               <div className="space-y-3">
-                {facility.metrics.map((metric, index) => (
+                {facility.metrics.map((metric) => (
                   <div key={metric.name} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <metric.icon className="w-4 h-4 text-cyan-400" />
