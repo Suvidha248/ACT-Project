@@ -185,7 +185,7 @@ const getAuthHeaders = (): Record<string, string> => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-white">
-                    {note.author?.fullName || 'Unknown User'}
+                    {note.author?.name || 'Unknown User'}
                   </p>
                   <p className="text-xs text-slate-400 font-mono">
                     {note.author?.role || 'User'}

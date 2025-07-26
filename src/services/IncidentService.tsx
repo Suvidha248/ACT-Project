@@ -330,7 +330,7 @@ function mapApiNote(apiNote: APINote): Note {
     content: apiNote.content,
     author: {
       id: apiNote.author.id,
-      fullName: apiNote.author.name, // ✅ Map 'name' to 'fullName'
+      name: apiNote.author.name, // ✅ Map 'name' to 'fullName'
       email: "user@example.com", // Add email to your API if available
       role: apiNote.author.role || 'User'
     },
