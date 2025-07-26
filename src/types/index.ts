@@ -148,6 +148,7 @@ export interface Incident {
   resolvedAt?: Date;
   closedAt?: Date;
   notes: Note[];
+  notesCount?: number;  
   escalationLevel: number;
   slaDeadline?: Date;
   additionalContext?: string;

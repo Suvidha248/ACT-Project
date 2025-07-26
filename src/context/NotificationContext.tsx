@@ -5,7 +5,7 @@ import { rtdb } from '../firebase';
 import type { Notification, NotificationState, NotificationType } from '../types';
 import { useAuth } from './AuthContext';
 
-interface NotificationContextType extends NotificationState {
+export interface NotificationContextType extends NotificationState {
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   getUnreadCount: () => number;
@@ -284,3 +284,4 @@ export const useNotifications = () => {
 
 // Export the context
 export { NotificationContext };
+

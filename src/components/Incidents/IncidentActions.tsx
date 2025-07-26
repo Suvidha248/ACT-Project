@@ -97,9 +97,9 @@ export function IncidentActions({ incident }: IncidentActionsProps) {
           </Button>
         )}
 
-        <Button
+              <Button
           onClick={() => setShowAssignModal(true)}
-          className="w-full bg-slate-700/50 hover:bg-slate-700 border border-slate-600 text-white font-semibold py-3 transition-all duration-200"
+          className="w-full"
           variant="outline"
         >
           <UserCheck className="w-4 h-4 mr-2" />

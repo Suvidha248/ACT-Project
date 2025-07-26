@@ -29,14 +29,12 @@ type APIIncident = {
   acknowledgedAt?: string;
   resolvedAt?: string;
   closedAt?: string;
+  notesCount?: number;
   assignedTo?: {
     id?: string;
-    fullName?: string;
-    name?: string; // ✅ API uses 'name' field
-    email?: string;
+    name: string; // ✅ API uses 'name', not 'fullName'
     role?: string;
     department?: string;
-    group?: string;
     assignedAt?: {
       seconds?: number;
       nanos?: number;
@@ -44,14 +42,13 @@ type APIIncident = {
   };
   reportedBy?: {
     id?: string;
-    fullName?: string;
-    name?: string; // ✅ API uses 'name' field
-    email?: string;
+    name: string; // ✅ API uses 'name', not 'fullName'
     role?: string;
-    department?: string;
-    group?: string;
   };
   notes?: APINote[];
+  additionalContext?: string;
+  tags?: string[];
+  workOrders?: unknown[];
 };
 
 interface UserStorageData {
@@ -71,13 +68,12 @@ type APINote = {
   content: string;
   author: {
     id: string;
-    fullName: string;
-    email?: string;
+    name: string; // ✅ API uses 'name', not 'fullName'
     role?: string;
   };
   createdAt: string;
   type?: string;
-  isInternal?: boolean;
+  internal?: boolean; // ✅ API uses 'internal', not 'isInternal'
 };
 
 export interface IncidentFilters {
@@ -201,34 +197,28 @@ export type IncidentFormData = {
 function createUserFromApi(
   apiUser: { 
     id?: string; 
-    fullName?: string; 
-    name?: string; // ✅ Handle 'name' field from API
-    email?: string; 
+    name: string; // ✅ Now correctly expecting 'name'
     role?: string; 
-    department?: string; 
-    group?: string;
+    department?: string;
   }, 
   facility?: string
 ): User {
   const now = new Date();
-  
-  // Use name as fallback for fullName and vice versa
-  const userName = apiUser.fullName || apiUser.name || 'Unknown User';
   const userId = apiUser.id || `unknown_${Date.now()}`;
   
   return {
     id: userId,
-    fullName: userName,
-    username: userName.toLowerCase().replace(/\s+/g, ''),
-    email: apiUser.email || "no-email@example.com",
+    fullName: apiUser.name, // ✅ Map 'name' to 'fullName'
+    username: apiUser.name.toLowerCase().replace(/\s+/g, ''),
+    email: "no-email@example.com", // You might want to add email to your API
     role: apiUser.role || 'User',
     department: apiUser.department || "General",
-    group: apiUser.group || "General",
+    group: "General", // Add group to your API if needed
     facilityName: facility || "",
     isActive: true,
     createdAt: dateToFirestoreTimestamp(now),
     updatedAt: dateToFirestoreTimestamp(now),
-    displayName: userName,
+    displayName: apiUser.name,
     uid: userId,
     createdAtAsTimestamp: dateToFirestoreTimestamp(now),
     updatedAtAsTimestamp: dateToFirestoreTimestamp(now),
@@ -262,7 +252,6 @@ function mapApiIncident(api: APIIncident): Incident {
   // Helper function to safely convert strings to lowercase
   const safeToLowerCase = (value: string | undefined | null): string => {
     if (!value || typeof value !== 'string') {
-      console.warn('safeToLowerCase received invalid value:', value);
       return '';
     }
     return value.toLowerCase();
@@ -290,50 +279,64 @@ function mapApiIncident(api: APIIncident): Incident {
     id: api.id,
     title: api.title || "Untitled Incident",
     
-    // ✅ FIXED: Safe conversion with comprehensive fallbacks
     status: (safeToLowerCase(api.status) as IncidentStatus) || "new",
     priority: (safeToLowerCase(api.priority) as IncidentPriority) || "medium", 
     
     location: api.location || api.facility || "Unknown Location",
     alertType: (safeToLowerCase(api.alertType) as AlertType) || "equipment",
     
-    // ✅ FIXED: Enhanced user mapping with null checks
-    assignedTo: api.assignedTo ? createUserFromApi(api.assignedTo, api.facility || api.location) : undefined,
-    reportedBy: api.reportedBy ? createUserFromApi(api.reportedBy, api.facility || api.location) : createSystemUser(),
+    assignedTo: api.assignedTo ? createUserFromApi({
+      id: api.assignedTo.id,
+      name: api.assignedTo.name,
+      role: api.assignedTo.role,
+      department: api.assignedTo.department
+    }, api.facility || api.location) : undefined,
     
-    // ✅ FIXED: Safe date parsing
+    reportedBy: api.reportedBy ? createUserFromApi({
+      id: api.reportedBy.id,
+      name: api.reportedBy.name,
+      role: api.reportedBy.role,
+    }, api.facility || api.location) : createSystemUser(),
+    
     createdAt: parseDate(api.createdAt) || new Date(),
     updatedAt: parseDate(api.updatedAt) || parseDate(api.createdAt) || new Date(),
     
     description: api.description || "No description provided",
-    slaDeadline: parseDate(api.slaDeadline), // ✅ Optional field
+    slaDeadline: parseDate(api.slaDeadline),
     notes: Array.isArray(api.notes) ? api.notes.map(mapApiNote) : [],
     escalationLevel: typeof api.escalationLevel === 'number' ? api.escalationLevel : 0,
     
-    // ✅ FIXED: Safe optional timestamp parsing
+    // ✅ CRITICAL FIX: Add notesCount mapping
+    notesCount: typeof api.notesCount === 'number' ? api.notesCount : undefined,
+    
     acknowledgedAt: parseDate(api.acknowledgedAt),
     resolvedAt: parseDate(api.resolvedAt),
     closedAt: parseDate(api.closedAt),
   };
 
-  console.log('✅ Successfully mapped incident:', result);
+  // ✅ ENHANCED: Debug logging for notesCount
+  console.log('✅ Successfully mapped incident:', {
+    id: result.id,
+    notesCount: result.notesCount,
+    apiNotesCount: api.notesCount
+  });
+  
   return result;
 }
 
 function mapApiNote(apiNote: APINote): Note {
-  const defaultUser = getCurrentUserFromStorage();
   return {
     id: apiNote.id,
     content: apiNote.content,
     author: {
       id: apiNote.author.id,
-      fullName: apiNote.author.fullName,
-      email: apiNote.author.email || "user@example.com",
-      role: apiNote.author.role || defaultUser.role || 'User'
+      fullName: apiNote.author.name, // ✅ Map 'name' to 'fullName'
+      email: "user@example.com", // Add email to your API if available
+      role: apiNote.author.role || 'User'
     },
     createdAt: new Date(apiNote.createdAt),
     type: (apiNote.type as Note['type']) || "user",
-    isInternal: apiNote.isInternal || false,
+    isInternal: apiNote.internal || false, // ✅ Map 'internal' to 'isInternal'
   };
 }
 
@@ -529,9 +532,23 @@ export const getFilteredIncidents = async (
       }
     );
 
-    debugLog("📦 API Response:", response.data);
+    // ✅ ENHANCED: Debug notesCount specifically
+    console.log("📦 Raw API Response:", response.data);
+    console.log("📊 NotesCount debug:", response.data.data?.map(i => ({
+      id: i.id,
+      notesCount: i.notesCount,
+      notesCountType: typeof i.notesCount
+    })));
+
     const apiIncidents = response.data.data || [];
     const transformedIncidents = apiIncidents.map(mapApiIncident);
+
+    // ✅ ENHANCED: Debug transformed data
+    console.log("🔄 Transformed incidents notesCount:", transformedIncidents.map(i => ({
+      id: i.id,
+      notesCount: i.notesCount,
+      notesCountType: typeof i.notesCount
+    })));
 
     return {
       data: transformedIncidents,
@@ -541,6 +558,7 @@ export const getFilteredIncidents = async (
     };
   });
 };
+
 
 export const createIncident = async (
   incidentData: IncidentFormData

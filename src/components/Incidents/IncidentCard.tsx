@@ -1,3 +1,4 @@
+// components/Incidents/IncidentCard.tsx
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import {
@@ -12,6 +13,7 @@ import {
   TrendingUp,
   User,
 } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Incident } from "../../types";
 import { Badge } from "../Shared/Badge";
@@ -21,6 +23,15 @@ interface IncidentCardProps {
 }
 
 export function IncidentCard({ incident }: IncidentCardProps) {
+  // ✅ SIMPLIFIED: Debug logging without interfering with rendering
+  useEffect(() => {
+    console.log(`🎯 IncidentCard ${incident.id} props:`, {
+      notesCount: incident.notesCount,
+      notesLength: incident.notes?.length,
+      assignedTo: incident.assignedTo?.fullName || 'Unassigned'
+    });
+  }, [incident.id, incident.notesCount, incident.notes?.length, incident.assignedTo]);
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "critical":
@@ -106,21 +117,22 @@ export function IncidentCard({ incident }: IncidentCardProps) {
     }
   };
 
-const isOverdue = incident.slaDeadline 
-  ? new Date() > new Date(incident.slaDeadline) && !["resolved", "closed"].includes(incident.status)
-  : false;
+  const isOverdue = incident.slaDeadline
+    ? new Date() > new Date(incident.slaDeadline) && !["resolved", "closed"].includes(incident.status)
+    : false;
 
   const AlertIcon = getAlertTypeIcon(incident.alertType);
 
+  // ✅ FIXED: Calculate notes count directly without function complexity
+  const notesCount = incident.notesCount ?? incident.notes?.length ?? 0;
 
   return (
     <Link to={`/incidents/${incident.id}`}>
       <motion.div
-        className={`glass-card p-6 hover:glass-card-hover transition-all duration-300 cursor-pointer relative overflow-hidden ${
-          isOverdue
-            ? "border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-            : ""
-        }`}
+        className={`glass-card p-6 hover:glass-card-hover transition-all duration-300 cursor-pointer relative overflow-hidden ${isOverdue
+          ? "border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+          : ""
+          }`}
         whileHover={{ scale: 1.01, y: -2 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
@@ -220,7 +232,8 @@ const isOverdue = incident.slaDeadline
           <div className="flex items-center space-x-2">
             <MessageSquare className="w-4 h-4 text-teal-400" />
             <span className="font-mono text-xs">
-              {incident.notes.length} notes
+              {/* ✅ FIXED: Direct value without function call */}
+              {notesCount} notes
             </span>
           </div>
         </div>
@@ -236,14 +249,13 @@ const isOverdue = incident.slaDeadline
           </div>
 
           <div
-            className={`text-xs font-mono ${
-              isOverdue ? "text-red-400 font-semibold" : "text-slate-500"
-            }`}
+            className={`text-xs font-mono ${isOverdue ? "text-red-400 font-semibold" : "text-slate-500"
+              }`}
           >
-            SLA: {incident.slaDeadline 
-  ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
-  : 'No SLA'
-}
+            SLA: {incident.slaDeadline
+              ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
+              : 'No SLA'
+            }
           </div>
         </div>
       </motion.div>

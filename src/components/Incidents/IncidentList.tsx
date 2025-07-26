@@ -121,10 +121,17 @@ export const IncidentList = () => {
       const result = await getFilteredIncidents(filters);
 
       console.log("📦 Received incidents:", result);
+      // ✅ ENHANCED: Debug notes count in received data
+      console.log("📊 Notes count debug:", result.data.map(i => ({ 
+        id: i.id, 
+        notesCount: i.notesCount,
+        notes: i.notes?.length 
+      })));
 
       setIncidents(result.data);
       setTotalItems(result.total);
 
+      // ✅ ENHANCED: Show success with notes count info
       // toast.success(`Loaded ${result.data.length} incidents`);
 
     } catch (err) {
@@ -202,7 +209,7 @@ export const IncidentList = () => {
       ["acknowledged", "in-progress"].includes(i.status)
     ).length,
     overdue: incidents.filter((i) =>
-      i.slaDeadline && new Date() > i.slaDeadline &&
+      i.slaDeadline && new Date() > new Date(i.slaDeadline) &&
       !["resolved", "closed"].includes(i.status)
     ).length
   };
@@ -370,7 +377,7 @@ export const IncidentList = () => {
           {filteredIncidents.length > 0 ? (
             filteredIncidents.map((incident) => (
               <IncidentCard
-                key={incident.id}
+                key={`${incident.id}-${incident.notesCount}-${Date.now()}`}  // ✅ ENHANCED key for better re-rendering
                 incident={incident}
               />
             ))
