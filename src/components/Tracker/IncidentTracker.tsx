@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Activity, Clock, Route, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
 import { useIncidents } from '../../context/IncidentContext';
+import { Badge } from '../Shared/Badge';
 import { TrackerCard } from './TrackerCard';
 import { TrackerFilters } from './TrackerFilters';
-import { Badge } from '../Shared/Badge';
-import { Route, Activity, Clock, TrendingUp } from 'lucide-react';
 
 export function IncidentTracker() {
   const { state } = useIncidents();
@@ -21,7 +21,11 @@ export function IncidentTracker() {
   });
 
   const activeIncidents = filteredIncidents.filter(i => !['resolved', 'closed'].includes(i.status));
-  const overdueIncidents = filteredIncidents.filter(i => new Date() > i.slaDeadline && !['resolved', 'closed'].includes(i.status));
+  const overdueIncidents = filteredIncidents.filter(i => 
+  i.slaDeadline && 
+  new Date() > new Date(i.slaDeadline) && 
+  !['resolved', 'closed'].includes(i.status)
+);
 
   return (
     <div className="p-6 space-y-6">

@@ -19,7 +19,6 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-// ✅ RESTORED: Glass theme pagination
 const Pagination = ({ currentPage, totalItems, pageSize, onPageChange }: PaginationProps) => {
   const totalPages = Math.ceil(totalItems / pageSize);
   if (totalPages <= 1) return null;
@@ -57,7 +56,6 @@ const Pagination = ({ currentPage, totalItems, pageSize, onPageChange }: Paginat
   );
 };
 
-// ✅ RESTORED: Glass theme loading spinner
 const LoadingSpinner = () => (
   <div className="text-center py-12">
     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto"></div>
@@ -65,7 +63,6 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// ✅ RESTORED: Glass theme error message
 const ErrorMessage = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6">
     <div className="flex items-center space-x-2">
@@ -83,7 +80,7 @@ const ErrorMessage = ({ error, onRetry }: { error: string; onRetry: () => void }
 );
 
 export const IncidentList = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading, initialized } = useAuth();
 
   // Local state for filtered incidents
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -99,8 +96,26 @@ export const IncidentList = () => {
   const [showIncidentForm, setShowIncidentForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  // ✅ CRITICAL FIX: Initialize facility filter immediately when profile loads
+  useEffect(() => {
+    if (profile?.facilityName && facilityFilter === "all") {
+      console.log("🏢 Setting default facility filter:", profile.facilityName);
+      setFacilityFilter(profile.facilityName.toLowerCase());
+    }
+  }, [profile?.facilityName]);
+
   const loadIncidents = useCallback(async () => {
-    if (!user) return;
+    // ✅ CRITICAL FIX: Don't load until auth is fully initialized
+    if (!initialized || !user) {
+      console.log("⏳ Waiting for authentication to initialize...");
+      return;
+    }
+
+    // ✅ CRITICAL FIX: Don't load if we're still waiting for profile and default facility should be set
+    if (authLoading && facilityFilter === "all" && !profile) {
+      console.log("⏳ Waiting for user profile to load...");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -117,11 +132,11 @@ export const IncidentList = () => {
       };
 
       console.log("🔍 Loading incidents with filters:", filters);
+      console.log("👤 User profile:", { uid: user.uid, facility: profile?.facilityName });
 
       const result = await getFilteredIncidents(filters);
 
-      console.log("📦 Received incidents:", result);
-      // ✅ ENHANCED: Debug notes count in received data
+      console.log("📦 Received incidents:", result.data.length);
       console.log("📊 Notes count debug:", result.data.map(i => ({ 
         id: i.id, 
         notesCount: i.notesCount,
@@ -131,8 +146,7 @@ export const IncidentList = () => {
       setIncidents(result.data);
       setTotalItems(result.total);
 
-      // ✅ ENHANCED: Show success with notes count info
-      // toast.success(`Loaded ${result.data.length} incidents`);
+      console.log(`✅ Successfully loaded ${result.data.length} incidents for facility: ${facilityFilter}`);
 
     } catch (err) {
       console.error('❌ Error loading incidents:', err);
@@ -143,19 +157,29 @@ export const IncidentList = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, facilityFilter, statusFilter, priorityFilter, currentPage]);
+  }, [
+    user, 
+    profile, 
+    initialized, 
+    authLoading, 
+    facilityFilter, 
+    statusFilter, 
+    priorityFilter, 
+    currentPage
+  ]);
 
-  // Load incidents when filters change
+  // ✅ CRITICAL FIX: Load incidents when auth state OR filters change
   useEffect(() => {
+    console.log("🔄 useEffect triggered - Auth state:", { 
+      initialized, 
+      authLoading, 
+      hasUser: !!user, 
+      hasProfile: !!profile,
+      facilityFilter 
+    });
+    
     loadIncidents();
   }, [loadIncidents]);
-
-  // Set default facility filter based on user profile
-  useEffect(() => {
-    if (profile?.facilityName && facilityFilter === "all") {
-      setFacilityFilter(profile.facilityName.toLowerCase());
-    }
-  }, [profile, facilityFilter]);
 
   const handleRefresh = () => {
     setCurrentPage(1);
@@ -167,6 +191,7 @@ export const IncidentList = () => {
 
     switch (filterType) {
       case 'facility':
+        console.log("🏢 Facility filter changed:", value);
         setFacilityFilter(value);
         break;
       case 'status':
@@ -178,15 +203,41 @@ export const IncidentList = () => {
     }
   };
 
+  // ✅ FIXED: Better clear filters logic with proper defaults
   const clearFilters = () => {
-    setFacilityFilter("all");
+    const defaultFacility = profile?.facilityName ? profile.facilityName.toLowerCase() : "all";
+    
+    console.log("🧹 Clearing filters...", {
+      currentFilters: { facilityFilter, statusFilter, priorityFilter, searchTerm },
+      userFacility: profile?.facilityName,
+      defaultFacility,
+      willResetTo: {
+        facility: defaultFacility,
+        status: "all",
+        priority: "all",
+        search: "",
+        page: 1
+      }
+    });
+
+    setFacilityFilter(defaultFacility);
     setStatusFilter("all");
     setPriorityFilter("all");
     setSearchTerm("");
     setCurrentPage(1);
+    
+    console.log("✅ Filters cleared successfully");
   };
 
-  const hasActiveFilters = facilityFilter !== "all" || statusFilter !== "all" || priorityFilter !== "all" || searchTerm.trim() !== "";
+  // ✅ FIXED: Proper logic for detecting active filters based on user's defaults
+  const getDefaultFacility = () => profile?.facilityName?.toLowerCase() || "all";
+  const defaultFacility = getDefaultFacility();
+  
+  const hasActiveFilters = 
+    facilityFilter !== defaultFacility || 
+    statusFilter !== "all" || 
+    priorityFilter !== "all" || 
+    searchTerm.trim() !== "";
 
   // Client-side search filtering
   const filteredIncidents = incidents.filter((incident) => {
@@ -214,6 +265,23 @@ export const IncidentList = () => {
     ).length
   };
 
+  // ✅ ENHANCED: Show loading while auth is initializing
+  if (!initialized || authLoading) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12 glass-card rounded-xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500 mx-auto mb-4"></div>
+          <h3 className="text-lg font-medium text-white mb-2">
+            Initializing...
+          </h3>
+          <p className="text-slate-400">
+            Setting up your dashboard...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="p-6">
@@ -234,7 +302,7 @@ export const IncidentList = () => {
 
   return (
     <div className="p-6">
-      {/* ✅ RESTORED: Original glass theme header */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold gradient-text">
@@ -246,6 +314,11 @@ export const IncidentList = () => {
             {facilityFilter === "all"
               ? "Monitor and manage warehouse incidents across all facilities"
               : `Monitor and manage incidents for ${facilityFilter} facility`}
+            {profile?.facilityName && (
+              <span className="ml-2 text-cyan-400">
+                (Your facility: {profile.facilityName})
+              </span>
+            )}
           </p>
         </div>
         <Button
@@ -261,10 +334,9 @@ export const IncidentList = () => {
       {/* Error Message */}
       {error && <ErrorMessage error={error} onRetry={handleRefresh} />}
 
-      {/* ✅ RESTORED: Original glass theme filters */}
+      {/* Filters */}
       <div className="glass-card p-4 mb-6">
         <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
-          {/* Search */}
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
@@ -276,7 +348,6 @@ export const IncidentList = () => {
             />
           </div>
 
-          {/* Facility Filter */}
           <div className="flex items-center space-x-2">
             <Filter className="w-4 h-4 text-slate-400" />
             <select
@@ -290,7 +361,6 @@ export const IncidentList = () => {
             </select>
           </div>
 
-          {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => handleFilterChange('status', e.target.value)}
@@ -304,7 +374,6 @@ export const IncidentList = () => {
             <option value="closed">Closed</option>
           </select>
 
-          {/* Priority Filter */}
           <select
             value={priorityFilter}
             onChange={(e) => handleFilterChange('priority', e.target.value)}
@@ -318,10 +387,10 @@ export const IncidentList = () => {
           </select>
         </div>
 
-        {/* Active Filters Display */}
+        {/* ✅ FIXED: Better active filters display */}
         {hasActiveFilters && (
           <div className="flex flex-wrap gap-2 mt-4">
-            {facilityFilter !== "all" && (
+            {facilityFilter !== defaultFacility && (
               <Badge variant="blue">Facility: {facilityFilter}</Badge>
             )}
             {statusFilter !== "all" && (
@@ -337,7 +406,7 @@ export const IncidentList = () => {
         )}
       </div>
 
-      {/* ✅ RESTORED: Summary & Filter Reset */}
+      {/* ✅ FIXED: Summary & Filter Reset with better logic */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-4">
           <span className="text-sm text-slate-400">
@@ -350,11 +419,16 @@ export const IncidentList = () => {
               className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
             >
               Clear filters
+              {/* ✅ DEBUG: Show what will be reset to in development */}
+              {process.env.NODE_ENV === 'development' && (
+                <span className="ml-1 text-xs opacity-75">
+                  (→ {defaultFacility === "all" ? "all facilities" : defaultFacility})
+                </span>
+              )}
             </button>
           )}
         </div>
 
-        {/* Summary Badges */}
         <div className="flex items-center space-x-2">
           <Badge variant="red" size="sm">
             {summaryStats.new} New
@@ -377,7 +451,7 @@ export const IncidentList = () => {
           {filteredIncidents.length > 0 ? (
             filteredIncidents.map((incident) => (
               <IncidentCard
-                key={`${incident.id}-${incident.notesCount}-${Date.now()}`}  // ✅ ENHANCED key for better re-rendering
+                key={`${incident.id}-${incident.notesCount}-${Date.now()}`}
                 incident={incident}
               />
             ))
