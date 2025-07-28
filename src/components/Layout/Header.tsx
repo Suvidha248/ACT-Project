@@ -97,7 +97,7 @@ const NotificationDropdown: React.FC = () => {
             />
 
             <motion.div
-              className="absolute right-0 mt-2 w-80 sm:w-96 glass-card rounded-xl shadow-2xl z-20 max-h-96 overflow-hidden"
+              className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl z-[9999] max-h-96 overflow-hidden"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -206,7 +206,7 @@ export function Header({ isAuthPage }: HeaderProps) {
     <motion.header
       className={`glass-card border-b border-white/10 px-4 sm:px-6 py-3 sm:py-4 m-2 sm:m-4 mb-0 rounded-t-2xl ${
         isAuthPage ? "justify-center" : ""
-      }`}
+      }relative z-[9999]`}
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

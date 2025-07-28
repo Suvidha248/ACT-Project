@@ -106,12 +106,12 @@ export function IncidentCard({ incident }: IncidentCardProps) {
     }
   };
 
-const isOverdue = incident.slaDeadline 
-  ? new Date() > new Date(incident.slaDeadline) && !["resolved", "closed"].includes(incident.status)
-  : false;
+  const isOverdue = incident.slaDeadline
+    ? new Date() > new Date(incident.slaDeadline) &&
+      !["resolved", "closed"].includes(incident.status)
+    : false;
 
   const AlertIcon = getAlertTypeIcon(incident.alertType);
-
 
   return (
     <Link to={`/incidents/${incident.id}`}>
@@ -230,7 +230,7 @@ const isOverdue = incident.slaDeadline
           <div className="flex items-center space-x-4 text-xs text-slate-500">
             {incident.assignedTo && (
               <span className="font-mono">
-                Assigned to: {incident.assignedTo?.fullName || 'Unassigned'}
+                Assigned to: {incident.assignedTo?.fullName || "Unassigned"}
               </span>
             )}
           </div>
@@ -240,10 +240,12 @@ const isOverdue = incident.slaDeadline
               isOverdue ? "text-red-400 font-semibold" : "text-slate-500"
             }`}
           >
-            SLA: {incident.slaDeadline 
-  ? formatDistanceToNow(new Date(incident.slaDeadline), { addSuffix: true })
-  : 'No SLA'
-}
+            SLA:{" "}
+            {incident.slaDeadline
+              ? formatDistanceToNow(new Date(incident.slaDeadline), {
+                  addSuffix: true,
+                })
+              : "No SLA"}
           </div>
         </div>
       </motion.div>

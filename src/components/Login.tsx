@@ -31,7 +31,7 @@ interface FormData {
 // Options from your user dataset
 const departmentOptions = [
   "Admin",
-  "Leadership", 
+  "Leadership",
   "Maintenance",
   "Operations",
   "Safety",
@@ -41,7 +41,7 @@ const departmentOptions = [
 const roleOptions = [
   "Facility Support",
   "Floor Supervisor",
-  "IT Support", 
+  "IT Support",
   "Operator",
   "Ops Manager",
   "Plant Head",
@@ -55,7 +55,7 @@ const groupOptions = [
   "GRP_Facility_Support",
   "GRP_Floor_Supervisor",
   "GRP_IT_Support",
-  "GRP_Operator", 
+  "GRP_Operator",
   "GRP_Ops_Manager",
   "GRP_Plant_Head",
   "GRP_Safety_Officer",
@@ -92,7 +92,7 @@ const Login: React.FC = () => {
       setAuthChecked(true);
       if (user && !isSignUp) navigate("/dashboard", { replace: true });
     });
-    
+
     if (location.state?.message) {
       setSuccessMessage(location.state.message as string);
       window.history.replaceState({}, document.title);
@@ -108,29 +108,29 @@ const Login: React.FC = () => {
     const userSnap = await getDoc(userDocRef);
     // if (!userSnap.exists()) {
     //   // Determine facility based on email domain or user selection
-    //   const facilityName = extraFields?.facilityName || 
+    //   const facilityName = extraFields?.facilityName ||
     //                       (extraFields?.email?.includes('novi') ? 'Novi' : 'Atlanta');
     if (!userSnap.exists()) {
-    // Determine facility - require explicit selection for signup
-    let facilityName = extraFields?.facilityName;
-    
-    // Only use email-based logic for Google sign-in (when no extraFields)
-    if (!facilityName && !extraFields) {
-      facilityName = user.email?.includes('novi') ? 'Novi' : 'Atlanta';
-    }
-    
-    // For regular signup, facilityName should be explicitly selected
-    if (!facilityName) {
-      throw new Error('Facility selection is required');
-    } 
-    
+      // Determine facility - require explicit selection for signup
+      let facilityName = extraFields?.facilityName;
+
+      // Only use email-based logic for Google sign-in (when no extraFields)
+      if (!facilityName && !extraFields) {
+        facilityName = user.email?.includes("novi") ? "Novi" : "Atlanta";
+      }
+
+      // For regular signup, facilityName should be explicitly selected
+      if (!facilityName) {
+        throw new Error("Facility selection is required");
+      }
+
       await setDoc(userDocRef, {
         id: user.uid,
         uid: user.uid,
         email: user.email,
         displayName: user.displayName || extraFields?.fullName || "",
         fullName: extraFields?.fullName || "",
-        username: extraFields?.username || user.email?.split('@')[0] || "",
+        username: extraFields?.username || user.email?.split("@")[0] || "",
         department: extraFields?.department || "",
         role: extraFields?.role || "Operator",
         group: extraFields?.group || "",
@@ -192,14 +192,18 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleSuccess = async (credentialResponse: CredentialResponse): Promise<void> => {
+  const handleSuccess = async (
+    credentialResponse: CredentialResponse
+  ): Promise<void> => {
     if (!credentialResponse.credential) {
       alert("No credential received");
       return;
     }
     setIsLoading(true);
     try {
-      const credential = GoogleAuthProvider.credential(credentialResponse.credential);
+      const credential = GoogleAuthProvider.credential(
+        credentialResponse.credential
+      );
       const userCredential = await signInWithCredential(auth, credential);
       await handleUserDocument(userCredential.user);
 

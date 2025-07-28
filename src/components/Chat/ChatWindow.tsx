@@ -134,7 +134,7 @@ const ChatWindow: React.FC<Props> = ({ chatUser, currentUserId }) => {
   if (isMinimized) {
     return (
       <div className="w-[300px] h-10 bg-slate-800 border border-slate-600 rounded-t-md shadow-md flex justify-between items-center px-2 text-sm">
-        <span className="text-white font-mono">{chatUser.name}</span>
+        <span className="text-white font-mono">{chatUser.fullName}</span>
         <div className="flex space-x-2">
           <Maximize2
             size={14}
@@ -155,7 +155,7 @@ const ChatWindow: React.FC<Props> = ({ chatUser, currentUserId }) => {
     <div className="w-[300px] h-96 bg-slate-800 border border-slate-600 rounded-t-md shadow-md overflow-hidden flex flex-col">
       <div className="bg-slate-900 px-3 py-2 text-sm font-mono text-slate-300 border-b border-slate-600 flex justify-between items-center">
         <span>
-          Chat with <span className="text-teal-400">{chatUser.name}</span>
+          Chat with <span className="text-teal-400">{chatUser.fullName}</span>
         </span>
         <div className="space-x-2">
           <Minus

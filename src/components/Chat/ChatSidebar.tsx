@@ -16,6 +16,7 @@ const ChatSidebar: React.FC = () => {
     unreadCounts,
     incrementUnread,
     clearUnreadForUser,
+    activeChatUserIds,
     lastMessages,
     updateLastMessage,
   } = useChat();
@@ -61,7 +62,7 @@ const ChatSidebar: React.FC = () => {
           seenPartners.add(partnerId);
           updateLastMessage(partnerId, lastMsg);
 
-          const isChatOpenWithUser = openChats.some((u) => u.id === partnerId);
+          const isChatOpenWithUser = activeChatUserIds.has(partnerId);
 
           const readRef = doc(
             db,
@@ -86,8 +87,10 @@ const ChatSidebar: React.FC = () => {
             const isUnread = lastMsgTimestamp > lastRead;
 
             if (isUnread && !isChatOpenWithUser) {
+              console.log("📨 New message from", partnerId);
               incrementUnread(partnerId);
             } else {
+              console.log("✅ Read or already open:", partnerId);
               clearUnreadForUser(partnerId);
             }
           });

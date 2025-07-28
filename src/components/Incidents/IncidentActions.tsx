@@ -108,52 +108,55 @@ export function IncidentActions({ incident }: IncidentActionsProps) {
             : "Assign"}
         </Button>
 
-
         <Button onClick={handleEscalate} className="w-full" variant="danger">
           Escalate
         </Button>
       </div>
 
-<Modal
-  isOpen={showAssignModal}
-  onClose={() => setShowAssignModal(false)}
-  title="Assign Incident"
-  className="bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl"
->
-  <div className="space-y-4">
-    <select
-      value={selectedUser}
-      onChange={(e) => setSelectedUser(e.target.value)}
-      className="w-full bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-    >
-      <option value="" className="bg-slate-800 text-white">Select user</option>
-      {state.users.map((user) => (
-        <option key={user.id} value={user.id} className="bg-slate-800 text-white">
-          {user.fullName}
-        </option>
-      ))}
-    </select>
-    <div className="flex justify-end space-x-3">
-      <Button 
-        variant="outline" 
-        onClick={() => setShowAssignModal(false)}
-        className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
+      <Modal
+        isOpen={showAssignModal}
+        onClose={() => setShowAssignModal(false)}
+        title="Assign Incident"
+        className="bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-xl shadow-2xl"
       >
-        Cancel
-      </Button>
-      <Button
-        variant="primary"
-        onClick={handleAssign}
-        disabled={!selectedUser}
-        className="bg-teal-600 hover:bg-teal-700 text-white"
-      >
-        Assign
-      </Button>
-    </div>
-  </div>
-</Modal>
-
-
-</motion.div>
+        <div className="space-y-4">
+          <select
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 text-white px-3 py-2 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          >
+            <option value="" className="bg-slate-800 text-white">
+              Select user
+            </option>
+            {state.users.map((user) => (
+              <option
+                key={user.id}
+                value={user.id}
+                className="bg-slate-800 text-white"
+              >
+                {user.fullName}
+              </option>
+            ))}
+          </select>
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignModal(false)}
+              className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleAssign}
+              disabled={!selectedUser}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              Assign
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </motion.div>
   );
 }

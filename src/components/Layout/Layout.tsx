@@ -1,3 +1,5 @@
+// components/Layout/Layout.tsx
+
 import { Outlet } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Header } from "./Header";
@@ -25,19 +27,23 @@ const ChatWindows = () => {
 export function Layout() {
   return (
     <ChatProvider>
-      <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        {/* Background grid and pulses */}
-        <div className="fixed inset-0 cyber-grid opacity-30 pointer-events-none" />
-        <div className="fixed top-20 left-20 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse" />
+      <div className="flex h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative z-[1]">
+        {/* Background effects */}
+        <div className="fixed inset-0 cyber-grid opacity-30 pointer-events-none z-0" />
+        <div className="fixed top-20 left-20 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl animate-pulse z-0" />
         <div
-          className="fixed bottom-20 right-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl animate-pulse"
+          className="fixed bottom-20 right-20 w-96 h-96 bg-cyan-500/5 rounded-full blur-3xl animate-pulse z-0"
           style={{ animationDelay: "2s" }}
         />
 
         <Sidebar />
 
-        <div className="flex-1 flex flex-col overflow-hidden relative">
-          <Header />
+        <div className="flex-1 flex flex-col overflow-hidden relative z-[1]">
+          {/* 🔥 Header must be above everything */}
+          <div className="z-[9999] relative">
+            <Header />
+          </div>
+
           <motion.main
             className="flex-1 overflow-auto relative z-10"
             initial={{ opacity: 0, y: 20 }}
@@ -48,7 +54,6 @@ export function Layout() {
           </motion.main>
         </div>
 
-        {/* Chat sidebar and all open chat windows */}
         <ChatSidebar />
         <ChatWindows />
       </div>

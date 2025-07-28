@@ -28,7 +28,7 @@ const UsersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   const currentRole = profile?.role;
 
   const totalPages = Math.ceil(users.length / USERS_PER_PAGE);
@@ -42,16 +42,16 @@ const UsersPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         console.log("Fetching users from Firestore...");
         const querySnapshot = await getDocs(collection(db, "users"));
-        
+
         console.log("Query snapshot size:", querySnapshot.size);
-        
+
         const userList: User[] = querySnapshot.docs.map((docSnap) => {
           const data = docSnap.data();
           console.log("User document data:", data);
-          
+
           return {
             id: docSnap.id,
             fullName: data.fullName || "",
@@ -61,7 +61,7 @@ const UsersPage: React.FC = () => {
             group: data.group || "",
           };
         });
-        
+
         console.log("Processed user list:", userList);
         setUsers(userList);
       } catch (err) {
@@ -71,7 +71,7 @@ const UsersPage: React.FC = () => {
         setLoading(false);
       }
     };
-    
+
     fetchUsers();
   }, []);
 
@@ -129,9 +129,11 @@ const UsersPage: React.FC = () => {
   return (
     <div className="p-8">
       <h2 className="text-3xl font-bold gradient-text mb-6">👥 Users</h2>
-      
+
       {users.length === 0 ? (
-        <div className="text-white text-center">No users found in Firestore.</div>
+        <div className="text-white text-center">
+          No users found in Firestore.
+        </div>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
