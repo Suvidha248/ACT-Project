@@ -7,6 +7,7 @@ import React, {
   useReducer,
 } from "react";
 import { toast } from "react-toastify";
+import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import * as IncidentAPI from "../services/IncidentService";
 import { fetchUsers } from "../services/userService";
@@ -244,6 +245,8 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(incidentReducer, initialState);
   const { addNotification } = useNotifications();
 
+  const { user, profile, initialized } = useAuth();
+
   // Load incidents with facility awareness
   const loadIncidentsByFacility = async (
     facility?: string,
@@ -292,17 +295,44 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!initialized || !user) {
+        console.log("⏳ Waiting for authentication...");
+        return;
+      }
+
       try {
         dispatch({ type: "SET_LOADING", payload: true });
+        
+        // Use facility from profile if available
+        const facility = profile?.facilityName?.toLowerCase();
+        
+        const filters: IncidentAPI.IncidentFilters = {
+          facility: facility || undefined,
+          page: 0,
+          size: 50,
+          sortBy: "createdAt",
+          sortOrder: "desc"
+        };
+
+        console.log("🔍 Loading incidents with filters:", filters);
+        
         const [incidents, users] = await Promise.all([
-          IncidentAPI.getFilteredIncidents({}),
+          IncidentAPI.getFilteredIncidents(filters), // ← Your service
           fetchUsers(),
         ]);
+        
         dispatch({ type: "SET_INCIDENTS", payload: incidents.data });
         dispatch({ type: "SET_USERS", payload: users });
+        
+        if (facility) {
+          dispatch({ type: "SET_CURRENT_FACILITY", payload: facility });
+        }
+        
+        console.log("✅ Incidents loaded:", incidents.data.length);
+        
       } catch (error) {
-        console.error("Error loading incidents or users", error);
-        dispatch({ type: "SET_ERROR", payload: "Failed to load data." });
+        console.error("❌ Error loading incidents:", error);
+        dispatch({ type: "SET_ERROR", payload: "Failed to load incidents." });
         toast.error("Failed to load incident data");
       } finally {
         dispatch({ type: "SET_LOADING", payload: false });
@@ -310,7 +340,7 @@ export function IncidentProvider({ children }: { children: ReactNode }) {
     };
 
     fetchData();
-  }, []);
+  }, [initialized, user, profile?.facilityName]);
 
   const createIncident = async (data: Partial<Incident>) => {
     try {

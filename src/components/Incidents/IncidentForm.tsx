@@ -1,21 +1,21 @@
-import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useIncidents } from "../../context/IncidentContext";
-import { Button } from "../Shared/Button";
-import { IncidentPriority, AlertType } from "../../types";
 import {
   AlertTriangle,
-  MapPin,
-  FileText,
-  Tag,
   Brain,
-  Zap,
-  Shield,
-  Package,
-  Thermometer,
   Droplets,
+  FileText,
+  MapPin,
+  Package,
+  Shield,
+  Tag,
+  Thermometer,
   X,
+  Zap,
 } from "lucide-react";
+import React, { useState } from "react";
+import { useIncidents } from "../../context/IncidentContext";
+import { AlertType, IncidentPriority } from "../../types";
+import { Button } from "../Shared/Button";
 
 interface IncidentFormProps {
   isOpen: boolean;
@@ -371,7 +371,7 @@ export function IncidentForm({ isOpen, onClose }: IncidentFormProps) {
               <Button
                 type="submit"
                 variant="primary"
-                loading={isSubmitting}
+                // loading={isSubmitting}
                 disabled={isSubmitting}
               >
                 <AlertTriangle className="w-4 h-4 mr-2" />{" "}

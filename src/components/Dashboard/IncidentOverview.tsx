@@ -23,7 +23,9 @@ export function IncidentOverview() {
     inProgress: incidents.filter(i => i.status === 'in-progress').length,
     resolved: incidents.filter(i => i.status === 'resolved').length,
     closed: incidents.filter(i => i.status === 'closed').length,
-    overdue: incidents.filter(i => new Date() > i.slaDeadline && !['resolved', 'closed'].includes(i.status)).length,
+    overdue: incidents.filter(
+      i => i.slaDeadline && new Date() > new Date(i.slaDeadline) && !['resolved', 'closed'].includes(i.status)
+    ).length,
     critical: incidents.filter(i => i.priority === 'critical').length,
   };
 
@@ -43,7 +45,7 @@ export function IncidentOverview() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       variants={containerVariants}
       initial="hidden"
@@ -59,7 +61,7 @@ export function IncidentOverview() {
           pulse={true}
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="Critical Alerts"
@@ -70,7 +72,7 @@ export function IncidentOverview() {
           glow="red"
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="In Progress"
@@ -81,7 +83,7 @@ export function IncidentOverview() {
           animated={true}
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="Resolved Today"
@@ -91,7 +93,7 @@ export function IncidentOverview() {
           trend={{ value: 23, isPositive: true }}
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="Overdue"
@@ -102,7 +104,7 @@ export function IncidentOverview() {
           glow={stats.overdue > 0 ? "red" : undefined}
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="System Shield"
@@ -111,7 +113,7 @@ export function IncidentOverview() {
           gradient="from-slate-500 to-gray-500"
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="Total Incidents"
@@ -120,7 +122,7 @@ export function IncidentOverview() {
           gradient="from-gray-500 to-slate-500"
         />
       </motion.div>
-      
+
       <motion.div variants={itemVariants}>
         <StatCard
           title="Response Time"

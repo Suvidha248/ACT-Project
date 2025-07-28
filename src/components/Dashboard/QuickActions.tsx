@@ -1,14 +1,12 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  BarChart3, 
-  Settings, 
-  Brain, 
-  Shield, 
+import {
   Activity,
   AlertTriangle,
-  FileText
+  BarChart3,
+  Brain,
+  FileText,
+  Plus,
+  Shield
 } from 'lucide-react';
 
 export function QuickActions() {

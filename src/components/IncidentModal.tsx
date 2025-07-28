@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "react-modal";
 import { fetchUsers } from "../services/userService";
 import { Incident, User } from "../types";
@@ -79,7 +79,7 @@ const IncidentModal: React.FC<IncidentModalProps> = ({
         <option value="">Select User</option>
         {users.map((user) => (
           <option key={user.id} value={user.id}>
-            {user.name}
+            {user.fullName}
           </option>
         ))}
       </select>
