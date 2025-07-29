@@ -245,7 +245,7 @@ export const IncidentList = () => {
         </div>
         <Button onClick={() => setShowForm(true)} variant="primary">
           <Plus className="mr-2 h-4 w-4" />
-          New Incident
+          Report New Incident
         </Button>
       </div>
 

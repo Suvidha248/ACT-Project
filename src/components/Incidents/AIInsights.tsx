@@ -1,13 +1,12 @@
-import React from "react";
 import { motion } from "framer-motion";
 import {
-  Brain,
-  TrendingUp,
-  Shield,
   Activity,
   AlertCircle,
+  Brain,
   Cpu,
+  Shield,
   Thermometer,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 

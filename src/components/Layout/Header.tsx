@@ -97,7 +97,7 @@ const NotificationDropdown: React.FC = () => {
             />
 
             <motion.div
-              className="absolute right-0 mt-2 w-80 sm:w-96 glass-card rounded-xl shadow-2xl z-20 max-h-96 overflow-hidden"
+              className="absolute right-0 mt-2 w-80 sm:w-96 bg-slate-800/90 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl z-[9999] max-h-96 overflow-hidden"
               initial={{ opacity: 0, y: -10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}

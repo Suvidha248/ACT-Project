@@ -77,7 +77,7 @@ const AlertHierarchyTab: React.FC = () => {
     const defaultRole = users.length > 0 ? users[0].role : "";
     const defaultNames = users
       .filter((u) => u.role === defaultRole)
-      .map((u) => u.name);
+      .map((u) => u.fullName);
 
     setFormData({
       system: selectedCategory,
@@ -104,7 +104,7 @@ const AlertHierarchyTab: React.FC = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
 
     if (name === "role") {
-      const names = users.filter((u) => u.role === value).map((u) => u.name);
+      const names = users.filter((u) => u.role === value).map((u) => u.fullName);
       setFilteredNames(names);
       setFormData((prev) => ({
         ...prev,
@@ -124,7 +124,7 @@ const AlertHierarchyTab: React.FC = () => {
   };
 
   const handleEdit = (alert: Alert) => {
-    const names = users.filter((u) => u.role === alert.role).map((u) => u.name);
+    const names = users.filter((u) => u.role === alert.role).map((u) => u.fullName);
 
     setFormData({
       ...alert,
