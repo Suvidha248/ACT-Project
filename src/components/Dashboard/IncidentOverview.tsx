@@ -1,7 +1,13 @@
 import { motion } from 'framer-motion';
 import {
   Activity,
+import {
+  Activity,
   AlertCircle,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Shield,
   AlertTriangle,
   CheckCircle,
   Clock,
@@ -12,21 +18,35 @@ import {
 import { useIncidents } from '../../context/IncidentContext';
 import { StatCard } from './StatCard';
 
+import { useAuth } from '../../context/AuthContext';
+import { useIncidents } from '../../context/IncidentContext';
+import { StatCard } from './StatCard';
 export function IncidentOverview() {
+  // ✅ Add the missing auth logic
+  const { initialized, loading: authLoading } = useAuth();
   const { state } = useIncidents();
-  const { incidents } = state;
+  const { incidents, loading: incidentLoading } = state;
+
+  // ✅ Add the missing loading state calculation
+  const isLoading = !initialized || authLoading || incidentLoading;
+  
+  // ✅ Add the missing safeIncidents variable
+  const safeIncidents = incidents || [];
 
   const stats = {
-    total: incidents.length,
-    new: incidents.filter(i => i.status === 'new').length,
-    acknowledged: incidents.filter(i => i.status === 'acknowledged').length,
-    inProgress: incidents.filter(i => i.status === 'in-progress').length,
-    resolved: incidents.filter(i => i.status === 'resolved').length,
-    closed: incidents.filter(i => i.status === 'closed').length,
-    overdue: incidents.filter(
-      i => i.slaDeadline && new Date() > new Date(i.slaDeadline) && !['resolved', 'closed'].includes(i.status)
+    total: safeIncidents.length,
+    new: safeIncidents.filter(i => i.status === 'new').length,
+    acknowledged: safeIncidents.filter(i => i.status === 'acknowledged').length,
+    inProgress: safeIncidents.filter(i => i.status === 'in-progress').length,
+    resolved: safeIncidents.filter(i => i.status === 'resolved').length,
+    closed: safeIncidents.filter(i => i.status === 'closed').length,
+    // ✅ Now safeIncidents is defined and the null check is proper
+    overdue: safeIncidents.filter(i => 
+      i.slaDeadline && 
+      new Date() > new Date(i.slaDeadline) && 
+      !['resolved', 'closed'].includes(i.status)
     ).length,
-    critical: incidents.filter(i => i.priority === 'critical').length,
+    critical: safeIncidents.filter(i => i.priority === 'critical').length,
   };
 
   const containerVariants = {
@@ -59,6 +79,7 @@ export function IncidentOverview() {
           gradient="from-red-500 to-orange-500"
           trend={{ value: 12, isPositive: false }}
           pulse={true}
+          loading={isLoading}
         />
       </motion.div>
 
@@ -70,6 +91,7 @@ export function IncidentOverview() {
           gradient="from-orange-500 to-red-500"
           trend={{ value: 8, isPositive: false }}
           glow="red"
+          loading={isLoading}
         />
       </motion.div>
 
@@ -81,6 +103,7 @@ export function IncidentOverview() {
           gradient="from-teal-500 to-cyan-500"
           trend={{ value: 15, isPositive: true }}
           animated={true}
+          loading={isLoading}
         />
       </motion.div>
 
@@ -91,6 +114,7 @@ export function IncidentOverview() {
           icon={CheckCircle}
           gradient="from-emerald-500 to-green-500"
           trend={{ value: 23, isPositive: true }}
+          loading={isLoading}
         />
       </motion.div>
 
@@ -102,6 +126,7 @@ export function IncidentOverview() {
           gradient="from-red-500 to-pink-500"
           pulse={stats.overdue > 0}
           glow={stats.overdue > 0 ? "red" : undefined}
+          loading={isLoading}
         />
       </motion.div>
 
@@ -111,6 +136,7 @@ export function IncidentOverview() {
           value={stats.closed}
           icon={Shield}
           gradient="from-slate-500 to-gray-500"
+          loading={isLoading}
         />
       </motion.div>
 
@@ -120,6 +146,7 @@ export function IncidentOverview() {
           value={stats.total}
           icon={XCircle}
           gradient="from-gray-500 to-slate-500"
+          loading={isLoading}
         />
       </motion.div>
 
@@ -131,6 +158,7 @@ export function IncidentOverview() {
           gradient="from-cyan-500 to-blue-500"
           trend={{ value: 18, isPositive: true }}
           isTime={true}
+          loading={isLoading}
         />
       </motion.div>
     </motion.div>
