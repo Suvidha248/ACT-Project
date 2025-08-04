@@ -13,7 +13,7 @@ export const connectWebSocket = (
 ): void => {
   if (!stompClient) {
     stompClient = new Client({
-      brokerURL: "ws://localhost:8080/ws",
+      brokerURL: "wss://act-backend-103082948076.us-central1.run.app/ws",
       reconnectDelay: 5000,
       debug: (str: string) => console.log("[WebSocket]", str),
 
@@ -54,7 +54,7 @@ export const connectWebSocket = (
  * Send a WebSocket chat message
  */
 export const sendWebSocketMessage = (
-  chatId: string,
+  // chatId: string,
   message: ChatMessage
 ): void => {
   if (stompClient?.connected) {

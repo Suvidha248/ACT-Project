@@ -18,7 +18,8 @@ export function NoteList({ notes, incidentId }: NoteListProps) {
   const [serverNotes, setServerNotes] = useState<ServerNote[]>([]);
 
   // Base URL configuration
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+  const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   // Enhanced auth headers function
 const getAuthHeaders = (): Record<string, string> => {
@@ -62,7 +63,7 @@ const getAuthHeaders = (): Record<string, string> => {
       try {
         console.log('📥 Loading notes for incident:', incidentId);
         
-        const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes`, {
           method: 'GET',
           headers: getAuthHeaders() // ✅ Include authentication headers
         });
@@ -114,7 +115,7 @@ const getAuthHeaders = (): Record<string, string> => {
     try {
       console.log('🔄 Refreshing notes for incident:', incidentId);
       
-      const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes`, {
         method: 'GET',
         headers: getAuthHeaders() // ✅ Include authentication headers
       });

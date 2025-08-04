@@ -13,7 +13,7 @@ const getToken = () => {
 
 // Axios instance
 const api = axios.create({
-  baseURL: "http://localhost:8080/api/admin", // Adjust if needed
+  baseURL: import.meta.env.VITE_API_URL,
   headers: {
     "Content-Type": "application/json",
   },

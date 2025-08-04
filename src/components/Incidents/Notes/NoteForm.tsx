@@ -19,7 +19,9 @@ export function NoteForm({ incidentId }: NoteFormProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Base URL configuration
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+  // const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+
+  const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   // ✅ Fixed: Auth headers function with proper typing
 const getAuthHeaders = (): Record<string, string> => {
@@ -43,7 +45,7 @@ const getAuthHeaders = (): Record<string, string> => {
       
       try {
         setIsSaving(true);
-        const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes/draft`, {
+        const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes/draft`, {
           method: 'PUT',
           headers: getAuthHeaders(),
           body: JSON.stringify({ content, isInternal })
@@ -67,7 +69,7 @@ const getAuthHeaders = (): Record<string, string> => {
   useEffect(() => {
     const loadDraft = async () => {
       try {
-        const draftResponse = await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes/draft`, {
+        const draftResponse = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes/draft`, {
           headers: getAuthHeaders()
         });
         if (draftResponse.ok) {
@@ -121,7 +123,7 @@ const getAuthHeaders = (): Record<string, string> => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes`, {
+      const response = await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -151,7 +153,7 @@ const getAuthHeaders = (): Record<string, string> => {
         setHasUnsavedChanges(false);
         
         // Clear draft from server and localStorage
-        await fetch(`${API_BASE_URL}/incidents/${incidentId}/notes/draft`, { 
+        await fetch(`${API_BASE_URL}/api/incidents/${incidentId}/notes/draft`, { 
           method: 'DELETE',
           headers: getAuthHeaders()
         });

@@ -1,6 +1,7 @@
 import { Alert } from "../types";
 
-const API_URL = "http://localhost:8080/api/alerts";
+// const API_URL = "http://localhost:8080/api/alerts";
+const API_URL = import.meta.env.VITE_API_URL;
 
 const getHeaders = () => ({
   "Content-Type": "application/json",
@@ -8,7 +9,7 @@ const getHeaders = () => ({
 });
 
 export const fetchAlerts = async (): Promise<Alert[]> => {
-  const response = await fetch(API_URL, {
+  const response = await fetch(`${API_URL}/api/alerts`, {
     headers: getHeaders(),
   });
 
@@ -18,7 +19,7 @@ export const fetchAlerts = async (): Promise<Alert[]> => {
 };
 
 export const createAlert = async (alertData: Alert): Promise<Alert> => {
-  const response = await fetch(API_URL, {
+  const response = await fetch(`${API_URL}/api/alerts`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(alertData),
@@ -33,7 +34,7 @@ export const updateAlert = async (
   alertId: number,
   alertData: Alert
 ): Promise<Alert> => {
-  const response = await fetch(`${API_URL}/${alertId}`, {
+  const response = await fetch(`${API_URL}/api/${alertId}`, {
     method: "PUT",
     headers: getHeaders(),
     body: JSON.stringify(alertData),
@@ -45,7 +46,7 @@ export const updateAlert = async (
 };
 
 export const deleteAlert = async (alertId: number): Promise<void> => {
-  const response = await fetch(`${API_URL}/${alertId}`, {
+  const response = await fetch(`${API_URL}/api/${alertId}`, {
     method: "DELETE",
     headers: getHeaders(),
   });

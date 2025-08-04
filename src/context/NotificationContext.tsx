@@ -1,6 +1,6 @@
 // context/NotificationContext.tsx
-import { onValue, push, ref, update } from 'firebase/database';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { onChildAdded, onValue, push, ref, update } from 'firebase/database';
+import React, { createContext, useCallback, useEffect, useState } from 'react';
 import { rtdb } from '../firebase';
 import type { Notification, NotificationState, NotificationType } from '../types';
 import { useAuth } from './AuthContext';
@@ -32,11 +32,29 @@ interface FirebaseNotificationData {
   actionUrl?: string;
 }
 
+// FIXED: Updated interface to match backend structure
 interface PubSubNotificationData {
-  payload: string;
+  title: string;
+  message: string;
+  type: string;
+  severity: string;
+  facility: string;
+  incidentId?: string;
+  action?: string;
   timestamp: number;
   processed: boolean;
+  processedAt: number;
+}
+
+// FIXED: Updated interface for assignment notifications
+interface AssignmentNotificationData {
+  incidentId: string;
+  title: string;
+  message: string;
   facility: string;
+  assignedUserId: string;
+  priority: string;
+  timestamp: number;
 }
 
 interface ParsedNotificationPayload {
@@ -54,7 +72,61 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [isLoading, setIsLoading] = useState(false);
   const [error] = useState<string | undefined>(undefined);
 
-  // Subscribe to personal notifications
+  // FIXED: Use useCallback to memoize functions and fix dependency issues
+  const addNotificationToPersonalFeed = useCallback(async (notification: ParsedNotificationPayload) => {
+    if (!user?.uid) return;
+    
+    try {
+      console.log('💾 Adding notification to personal feed:', notification);
+      
+      const userNotificationsRef = ref(rtdb, `notifications/${user.uid}/items`);
+      await push(userNotificationsRef, {
+        title: notification.title,
+        message: notification.message,
+        type: notification.type || 'incident',
+        severity: notification.severity || 'medium',
+        facility: notification.facility || profile?.facilityName,
+        incidentId: notification.incidentId,
+        read: false,
+        timestamp: {
+          seconds: Math.floor(Date.now() / 1000),
+          nanos: 0
+        },
+        actionUrl: notification.incidentId ? `/incidents/${notification.incidentId}` : undefined
+      });
+      
+      console.log('✅ Notification added to personal feed successfully');
+    } catch (error) {
+      console.error('❌ Failed to add notification to personal feed:', error);
+    }
+  }, [user?.uid, profile?.facilityName]);
+
+  // FIXED: Use useCallback to memoize function
+  const showLiveNotification = useCallback((notification: ParsedNotificationPayload) => {
+    console.log('🔔 Attempting to show browser notification:', notification);
+    
+    if (window.Notification?.permission === 'granted') {
+      new window.Notification(notification.title, {
+        body: notification.message,
+        icon: '/favicon.ico',
+        tag: notification.incidentId,
+        requireInteraction: notification.type === 'emergency_broadcast'
+      });
+    } else if (window.Notification?.permission === 'default') {
+      // Request permission if not granted
+      window.Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new window.Notification(notification.title, {
+            body: notification.message,
+            icon: '/favicon.ico',
+            tag: notification.incidentId
+          });
+        }
+      });
+    }
+  }, []); // No dependencies needed for this function
+
+  // Subscribe to personal notifications (existing logic)
   useEffect(() => {
     if (!user?.uid) return;
 
@@ -92,78 +164,128 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => unsubscribe();
   }, [user?.uid, profile?.facilityName]);
 
-  // Subscribe to Pub/Sub processed notifications
+  // FIXED: Subscribe to facility-wide Pub/Sub notifications using onChildAdded
   useEffect(() => {
     if (!profile?.facilityName) return;
 
-    const pubsubNotificationsRef = ref(rtdb, `pubsub-notifications/${profile.facilityName.toLowerCase()}`);
+    console.log(`🔔 Setting up facility notifications for: ${profile.facilityName}`);
     
-    const unsubscribePubSub = onValue(pubsubNotificationsRef, (snapshot) => {
-      const data = snapshot.val() as Record<string, PubSubNotificationData> | null;
-      if (data) {
-        console.log('📡 Pub/Sub notifications received:', data);
+    const facilityNotificationsRef = ref(rtdb, `pubsub-notifications/${profile.facilityName.toLowerCase()}`);
+    
+    // Use onChildAdded to listen for new notifications properly
+    const unsubscribeFacility = onChildAdded(facilityNotificationsRef, (snapshot) => {
+      const data = snapshot.val() as PubSubNotificationData;
+      if (data && data.timestamp > Date.now() - 60000) { // Last 1 minute
+        console.log('📡 New facility notification received:', data);
         
-        // Process new Pub/Sub notifications (last 30 seconds)
-        Object.values(data).forEach((pubsubNotif) => {
-          if (pubsubNotif.payload && pubsubNotif.timestamp > Date.now() - 30000) {
-            try {
-              const parsedNotification = JSON.parse(pubsubNotif.payload) as ParsedNotificationPayload;
-              showLiveNotification(parsedNotification);
-              
-              // Add to personal notifications if not already there
-              addNotificationToPersonalFeed(parsedNotification);
-            } catch (e) {
-              console.error('Failed to parse Pub/Sub notification:', e);
-            }
-          }
+        // Add to personal feed automatically
+        addNotificationToPersonalFeed({
+          title: data.title,
+          message: data.message,
+          type: data.type as NotificationType,
+          severity: data.severity as 'low' | 'medium' | 'high' | 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
+        });
+
+        // Show browser notification
+        showLiveNotification({
+          title: data.title,
+          message: data.message,
+          type: data.type as NotificationType,
+          severity: data.severity as 'low' | 'medium' | 'high' | 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
         });
       }
     });
 
-    return () => unsubscribePubSub();
-  }, [profile?.facilityName, user?.uid]);
+    return () => unsubscribeFacility();
+  }, [profile?.facilityName, addNotificationToPersonalFeed, showLiveNotification]); // FIXED: Added dependencies
 
-  // Add notification to personal feed
-  const addNotificationToPersonalFeed = async (notification: ParsedNotificationPayload) => {
+  // FIXED: Subscribe to user-specific assignments
+  useEffect(() => {
     if (!user?.uid) return;
-    
-    try {
-      const userNotificationsRef = ref(rtdb, `notifications/${user.uid}/items`);
-      await push(userNotificationsRef, {
-        title: notification.title,
-        message: notification.message,
-        type: notification.type || 'incident',
-        severity: notification.severity || 'medium',
-        facility: notification.facility || profile?.facilityName,
-        incidentId: notification.incidentId,
-        read: false,
-        timestamp: {
-          seconds: Math.floor(Date.now() / 1000),
-          nanos: 0
-        },
-        actionUrl: notification.incidentId ? `/incidents/${notification.incidentId}` : undefined
-      });
-    } catch (error) {
-      console.error('Failed to add notification to personal feed:', error);
-    }
-  };
 
-  // Show browser notifications for live updates
-  const showLiveNotification = (notification: ParsedNotificationPayload) => {
-    if (window.Notification?.permission === 'granted') {
-      new window.Notification(notification.title, {
-        body: notification.message,
-        icon: '/favicon.ico',
-        tag: notification.incidentId
-      });
-    }
-  };
+    console.log(`👤 Setting up assignment notifications for user: ${user.uid}`);
+    
+    const assignmentNotificationsRef = ref(rtdb, `user-assignments/${user.uid}`);
+    
+    const unsubscribeAssignments = onChildAdded(assignmentNotificationsRef, (snapshot) => {
+      const data = snapshot.val() as AssignmentNotificationData;
+      if (data && data.timestamp > Date.now() - 60000) { // Last 1 minute
+        console.log('👤 New assignment notification received:', data);
+        
+        // Add to personal feed
+        addNotificationToPersonalFeed({
+          title: data.title,
+          message: data.message,
+          type: 'incident_assigned',
+          severity: data.priority as 'low' | 'medium' | 'high' | 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
+        });
+
+        // Show browser notification
+        showLiveNotification({
+          title: data.title,
+          message: data.message,
+          type: 'incident_assigned',
+          severity: data.priority as 'low' | 'medium' | 'high' | 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
+        });
+      }
+    });
+
+    return () => unsubscribeAssignments();
+  }, [user?.uid, addNotificationToPersonalFeed, showLiveNotification]); // FIXED: Added dependencies
+
+  // FIXED: Subscribe to emergency notifications
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    console.log('🚨 Setting up emergency notifications');
+    
+    const emergencyNotificationsRef = ref(rtdb, `emergency-notifications`);
+    
+    const unsubscribeEmergency = onChildAdded(emergencyNotificationsRef, (snapshot) => {
+      const data = snapshot.val() as PubSubNotificationData;
+      if (data && data.timestamp > Date.now() - 60000) { // Last 1 minute
+        console.log('🚨 New emergency notification received:', data);
+        
+        // Add to personal feed
+        addNotificationToPersonalFeed({
+          title: data.title,
+          message: data.message,
+          type: 'emergency_broadcast',
+          severity: 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
+        });
+
+        // Show browser notification
+        showLiveNotification({
+          title: data.title,
+          message: data.message,
+          type: 'emergency_broadcast',
+          severity: 'critical',
+          facility: data.facility,
+          incidentId: data.incidentId
+        });
+      }
+    });
+
+    return () => unsubscribeEmergency();
+  }, [user?.uid, addNotificationToPersonalFeed, showLiveNotification]); // FIXED: Added dependencies
 
   // Add notification programmatically (for incident operations)
-  const addNotification = async (notification: Omit<Notification, 'id' | 'timestamp' | 'recipients'>): Promise<void> => {
+  const addNotification = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'recipients'>): Promise<void> => {
     if (!user?.uid) return;
     
     try {
+      console.log('📝 Adding notification programmatically:', notification);
+      
       const userNotificationsRef = ref(rtdb, `notifications/${user.uid}/items`);
       await push(userNotificationsRef, {
         title: notification.title,
@@ -180,29 +302,30 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         actionUrl: notification.actionUrl
       });
 
-      // Also publish to pub/sub for other users
+      // Also publish to pub/sub for other users in the same facility
       if (profile?.facilityName) {
         const pubsubRef = ref(rtdb, `pubsub-notifications/${profile.facilityName.toLowerCase()}`);
         await push(pubsubRef, {
-          payload: JSON.stringify({
-            title: notification.title,
-            message: notification.message,
-            type: notification.type,
-            incidentId: notification.incidentId,
-            severity: notification.severity,
-            facility: notification.facility
-          }),
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          severity: notification.severity || 'medium',
+          facility: notification.facility || profile.facilityName,
+          incidentId: notification.incidentId,
+          action: 'manual_add',
           timestamp: Date.now(),
-          processed: false,
-          facility: profile.facilityName
+          processed: true,
+          processedAt: Date.now()
         });
       }
+      
+      console.log('✅ Notification added programmatically successfully');
     } catch (error) {
-      console.error('Error adding notification:', error);
+      console.error('❌ Error adding notification:', error);
     }
-  };
+  }, [user?.uid, profile?.facilityName]);
 
-  const markAsRead = async (id: string): Promise<void> => {
+  const markAsRead = useCallback(async (id: string): Promise<void> => {
     try {
       if (!user?.uid) return;
       
@@ -217,9 +340,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
+  }, [user?.uid]);
 
-  const markAllAsRead = async (): Promise<void> => {
+  const markAllAsRead = useCallback(async (): Promise<void> => {
     try {
       if (!user?.uid) return;
       
@@ -239,19 +362,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  };
+  }, [user?.uid, notifications]);
 
-  const getUnreadCount = (): number => {
+  const getUnreadCount = useCallback((): number => {
     return notifications.filter(n => !n.isRead).length;
-  };
+  }, [notifications]);
 
-  const getNotificationsByType = (type: string): Notification[] => {
+  const getNotificationsByType = useCallback((type: string): Notification[] => {
     return notifications.filter(n => n.type === type);
-  };
+  }, [notifications]);
 
-  const refreshNotifications = (): void => {
+  const refreshNotifications = useCallback((): void => {
     setIsLoading(true);
-  };
+  }, []);
 
   const value: NotificationContextType = {
     notifications,
@@ -273,15 +396,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-// Custom hook
-export const useNotifications = () => {
-  const context = useContext(NotificationContext);
-  if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
-  }
-  return context;
-};
-
-// Export the context
+// MOVED: Export context separately to fix Fast Refresh warning
 export { NotificationContext };
 

@@ -1,8 +1,9 @@
 import { User } from "../types";
 
 // Base URL configuration
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+// const API_BASE_URL =
+//   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 // Enhanced auth headers function
 const getAuthHeaders = (): Record<string, string> => {
@@ -21,9 +22,9 @@ const getAuthHeaders = (): Record<string, string> => {
 export const fetchUsers = async (): Promise<User[]> => {
   try {
     console.log("🔄 Fetching users...");
-    console.log("🔗 API URL:", `${API_BASE_URL}/admin/users`);
+    console.log("🔗 API URL:", `${API_BASE_URL}/api/admin/users`);
 
-    const response = await fetch(`${API_BASE_URL}/admin/users`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
       headers: getAuthHeaders(),
     });
 
@@ -51,9 +52,9 @@ export const fetchUsers = async (): Promise<User[]> => {
 export const editUser = async (user: User): Promise<User> => {
   try {
     console.log("🔄 Updating user:", user.id);
-    console.log("🔗 API URL:", `${API_BASE_URL}/admin/users/${user.id}`);
+    console.log("🔗 API URL:", `${API_BASE_URL}/api/admin/users/${user.id}`);
 
-    const response = await fetch(`${API_BASE_URL}/admin/users/${user.id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/${user.id}`, {
       method: "PUT",
       headers: getAuthHeaders(),
       body: JSON.stringify(user),
@@ -88,7 +89,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
   try {
     console.log("🔄 Deleting user:", userId);
 
-    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/${userId}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     });
@@ -112,7 +113,7 @@ export const deleteUser = async (userId: string): Promise<void> => {
 // Fetch roles with authentication
 export const fetchRoles = async (): Promise<string[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/admin/users/roles`, {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users/roles`, {
       headers: getAuthHeaders(),
     });
 

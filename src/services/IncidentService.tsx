@@ -8,9 +8,14 @@ import {
   User,
 } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
-const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '5000');
-const ENABLE_DEBUG = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true';
+// const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+// const API_BASE_URL = process.env.REACT_APP_API_URL;
+// const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || '5000');
+// const ENABLE_DEBUG = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === 'true';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_TIMEOUT = parseInt(import.meta.env.VITE_API_TIMEOUT || "5000");
+const ENABLE_DEBUG = import.meta.env.VITE_ENABLE_DEBUG_LOGGING === "true";
 
 // ✅ FIXED: Updated to match actual API response structure from screenshots
 type APIIncident = {
@@ -399,7 +404,7 @@ export const getIncidentById = async (id: string): Promise<Incident> => {
   }
 
   return handleApiCall(async () => {
-    const url = `${API_BASE_URL}/incidents/${encodeURIComponent(id)}`;
+    const url = `${API_BASE_URL}/api/incidents/${encodeURIComponent(id)}`;
     debugLog("🔍 Fetching incident by ID:", { id, url });
     
     try {
@@ -479,7 +484,7 @@ export const getFacilityIncidents = async (
       }
     });
 
-    const url = `${API_BASE_URL}/incidents?${params.toString()}`;
+    const url = `${API_BASE_URL}/api/incidents?${params.toString()}`;
     debugLog("🔗 Fetching facility incidents:", { facility, url });
     
     const response = await axios.get<{ data: APIIncident[]; total: number }>(
@@ -521,7 +526,7 @@ export const getFilteredIncidents = async (
       }
     });
 
-    const url = `${API_BASE_URL}/incidents?${params.toString()}`;
+    const url = `${API_BASE_URL}/api/incidents?${params.toString()}`;
     debugLog("🔗 Fetching filtered incidents:", url);
     
     const response = await axios.get<{ data: APIIncident[]; total: number }>(
@@ -587,7 +592,7 @@ export const createIncident = async (
     debugLog("Creating incident with payload:", payload);
 
     const response = await axios.post<APIIncident>(
-      `${API_BASE_URL}/incidents`,
+      `${API_BASE_URL}/api/incidents`,
       payload,
       {
         headers: getAuthHeader(),
@@ -638,7 +643,7 @@ export const updateIncident = async (
     debugLog("Updating incident with payload:", { id, payload });
 
     const response = await axios.put<APIIncident>(
-      `${API_BASE_URL}/incidents/${id}`,
+      `${API_BASE_URL}/api/incidents/${id}`,
       payload,
       {
         headers: getAuthHeader(),
@@ -653,7 +658,7 @@ export const updateIncidentStatus = async (id: string, status: IncidentStatus): 
   return handleApiCall(async () => {
     debugLog("Updating incident status:", { id, status });
     await axios.put(
-      `${API_BASE_URL}/incidents/${id}`,
+      `${API_BASE_URL}/api/incidents/${id}`,
       { status: status.toUpperCase() },
       { headers: getAuthHeader(), timeout: API_TIMEOUT }
     );
@@ -675,7 +680,7 @@ export const assignIncident = async (id: string, userId: string): Promise<void> 
     debugLog("Assigning incident:", { id, payload });
 
     await axios.put(
-      `${API_BASE_URL}/incidents/${id}/assign`,
+      `${API_BASE_URL}/api/incidents/${id}/assign`,
       payload,
       {
         headers: {
@@ -696,7 +701,7 @@ export const addNoteToIncident = async (
   return handleApiCall(async () => {
     debugLog('Adding note to incident', { incidentId, contentLength: noteContent.length });
     const response = await axios.post<APINote>(
-      `${API_BASE_URL}/incidents/${incidentId}/notes`,
+      `${API_BASE_URL}/api/incidents/${incidentId}/notes`,
       {
         content: noteContent.trim(),
         type: "user",
@@ -716,7 +721,7 @@ export const escalateIncident = async (id: string): Promise<void> => {
   return handleApiCall(async () => {
     debugLog("Escalating incident:", { id });
     await axios.put(
-      `${API_BASE_URL}/incidents/${id}/escalate`,
+      `${API_BASE_URL}/api/incidents/${id}/escalate`,
       { escalationReason: "Manual escalation requested" },
       { headers: getAuthHeader(), timeout: API_TIMEOUT }
     );
@@ -726,7 +731,7 @@ export const escalateIncident = async (id: string): Promise<void> => {
 export const deleteIncident = async (id: string): Promise<void> => {
   return handleApiCall(async () => {
     debugLog("Deleting incident:", { id });
-    await axios.delete(`${API_BASE_URL}/incidents/${id}`, {
+    await axios.delete(`${API_BASE_URL}/api/incidents/${id}`, {
       headers: getAuthHeader(),
       timeout: API_TIMEOUT
     });

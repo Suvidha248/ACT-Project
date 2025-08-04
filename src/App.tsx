@@ -23,6 +23,8 @@ import SettingsPage from "./pages/SettingsPage";
 import UploadUsers from "./pages/UploadUsers";
 import UsersPage from "./pages/UsersPage";
 
+console.log("API Base URL at app startup:", import.meta.env.VITE_API_URL);
+
 const Unauthorized = () => (
   <div className="p-6">
     <h2 className="text-2xl text-red-500 font-bold">Access Denied</h2>

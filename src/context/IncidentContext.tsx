@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
-import { useNotifications } from "../context/NotificationContext";
+import { useNotifications } from "../hooks/useNotifications";
 import * as IncidentAPI from "../services/IncidentService";
 import { fetchUsers } from "../services/userService";
 import { Incident, IncidentStatus, Note, User } from "../types";
