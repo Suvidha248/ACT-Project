@@ -36,7 +36,7 @@ const navigation = [
   },
   {
     name: "Analytics",
-    href: "/reports",
+    href: "/analytics",
     icon: BarChart3,
     color: "from-emerald-500 to-teal-500",
   },

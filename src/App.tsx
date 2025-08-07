@@ -22,6 +22,7 @@ import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import UploadUsers from "./pages/UploadUsers";
 import UsersPage from "./pages/UsersPage";
+import AnalyticsTab from "./pages/AnalyticsTab";
 
 console.log("API Base URL at app startup:", import.meta.env.VITE_API_URL);
 
@@ -39,9 +40,7 @@ const AppLoadingScreen = () => (
       <h3 className="text-xl font-medium text-white mb-2">
         Loading ACT Command Center
       </h3>
-      <p className="text-slate-400">
-        Initializing your workspace...
-      </p>
+      <p className="text-slate-400">Initializing your workspace...</p>
     </div>
   </div>
 );
@@ -58,7 +57,7 @@ function AppContent() {
       hasUser: !!user,
       hasProfile: !!profile,
       userEmail: user?.email,
-      userFacility: profile?.facilityName
+      userFacility: profile?.facilityName,
     });
   }, [initialized, loading, user, profile]);
 
@@ -83,10 +82,7 @@ function AppContent() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
-            <Route
-              path="/incidents/:id"
-              element={<IncidentDetailPage />}
-            />
+            <Route path="/incidents/:id" element={<IncidentDetailPage />} />
             <Route path="/tracker" element={<IncidentTrackerPage />} />
             <Route path="/users" element={<UsersPage />} />
 
@@ -134,13 +130,19 @@ function AppContent() {
             />
 
             <Route
-              path="/reports"
+              path="/analytics"
               element={
-                <div className="p-6">
-                  <h2 className="text-2xl font-bold gradient-text">
-                    Reports – Coming Soon
-                  </h2>
-                </div>
+                <ProtectedRoute
+                  allowedRoles={[
+                    "Admin",
+                    "Leader",
+                    "Technician",
+                    "Supervisor",
+                    "User",
+                  ]}
+                >
+                  <AnalyticsTab />
+                </ProtectedRoute>
               }
             />
 

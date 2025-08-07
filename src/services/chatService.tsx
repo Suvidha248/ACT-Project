@@ -2,7 +2,7 @@ import axios from "axios";
 import { ChatMessage } from "../types";
 
 // const BASE_URL = "http://localhost:8080/api/chat";
-const BASE_URL = import.meta.env.VITE_API_URL;
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export const sendMessage = async (
   chatId: string,
@@ -26,11 +26,14 @@ export const sendMessage = async (
 export const getMessages = async (chatId: string): Promise<ChatMessage[]> => {
   const token = sessionStorage.getItem("idToken") || "";
 
-  const res = await axios.get(`${BASE_URL}/api/chat/${chatId}/messages?limit=50`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+  const res = await axios.get(
+    `${BASE_URL}/api/chat/${chatId}/messages?limit=50`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
 
   return res.data as ChatMessage[];
 };
